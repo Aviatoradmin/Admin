@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Aviator — Demo (Mobile friendly)</title>
+  <style>
+    :root{--bg:#0b0b0b;--panel:#111;--accent:#1db954;--danger:#ff6b35;--muted:#9aa0a6;}
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;background:var(--bg);color:#fff;font-family:Inter,system-ui,Arial,Helvetica,sans-serif}
+    .app{max-width:420px;margin:0 auto;padding:12px}
+    header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+    header .brand{font-weight:700}
+    .topbar{display:flex;gap:8px}
+    .box{background:linear-gradient(180deg,#0f0f0f,#121212);padding:8px;border-radius:10px;border:1px solid #222}
+    .withdraw{background:goldenrod;color:#111;font-weight:700}
+    .balance{background:seagreen}
+    .flex{display:flex;gap:8px;align-items:center}
+    .plane-area{height:46vh;background:linear-gradient(180deg,#060606,#0c0c0c);border-radius:12px;margin:8px 0;position:relative;overflow:hidden}
+    canvas#planeCanvas{width:100%;height:100%;display:block}
+    .controls{display:flex;gap:8px;align-items:center;justify-content:space-between}
+    .stake-box{flex:1}
+    input[type=number],input[type=text],input[type=password]{width:100%;padding:10px;border-radius:8px;border:1px solid #333;background:#0b0b0b;color:#fff}
+    button{padding:10px 14px;border-radius:10px;border:0;background:var(--accent);color:#fff;font-weight:700}
+    button.cancel{background:var(--danger)}
+    .bet-box{width:120px;min-height:56px;border-radius:10px;padding:6px;background:#123;display:flex;flex-direction:column;justify-content:center;align-items:center}
+    .bet-box.waiting{background:#8b0000}
+    .past-list{display:flex;overflow-x:auto;gap:6px;padding:6px 0}
+    .past-item{min-width:70px;text-align:center;padding:6px;background:#161616;border-radius:8px}
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;padding:16px}
+    .card{background:#0b0b0b;padding:16px;border-radius:12px;width:100%;max-width:420px}
+    .hidden{display:none}
+    footer{font-size:12px;color:var(--muted);text-align:center;margin-top:8px}
+    @media(min-width:700px){.app{max-width:720px}}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="brand">Aviator (Demo)</div>
+      <div class="topbar flex">
+        <div id="withdrawBtn" class="box withdraw">Withdraw</div>
+        <div id="balanceBox" class="box balance">Balance: <span id="balance">0</span></div>
+      </div>
+    </header>
+
+    <div class="plane-area box" id="planeArea">
+      <canvas id="planeCanvas"></canvas>
+      <div style="position:absolute;left:8px;top:8px;z-index:5;color:#111;display:none" id="withdrawPanel"></div>
+    </div>
+
+    <div class="past-list box" id="pastList" aria-hidden="false"></div>
+
+    <div class="controls">
+      <div class="stake-box">
+        <label style="font-size:12px;color:var(--muted)">Stake</label>
+        <input id="stakeInput" type="number" placeholder="Enter stake"/>
+      </div>
+      <div id="betWrap">
+        <div id="betBtn" class="bet-box box">
+          <div id="betLabel">Bet</div>
+          <div id="betAmount">0</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
+      <button id="depositBtn">Deposit (demo)</button>
+      <button id="loginOpen">Login / Create</button>
+      <button id="logoutBtn" class="hidden">Logout</button>
+    </div>
+
+    <footer>Default balance for new users: 1000 • Page logs out on app switch or tab hidden</footer>
+  </div>
+
+  <!-- Login / Signup modal -->
+  <div id="authModal" class="modal hidden">
+    <div class="card">
+      <h3 id="authTitle">Login or Create</h3>
+      <div id="createForm">
+        <label>Full Name</label>
+        <input id="regName" type="text" placeholder="Your name" />
+        <label>Phone number</label>
+        <input id="regPhone" type="text" placeholder="07xxxxxxxx" />
+        <label>Password</label>
+        <div style="display:flex;gap:8px"><input id="regPass" type="password" placeholder="Password"/><button id="toggleRegPass">Show</button></div>
+        <label>Confirm Password</label>
+        <input id="regPass2" type="password" placeholder="Confirm"/>
+        <div style="display:flex;gap:8px;margin-top:8px"><button id="createAccountBtn">Create account</button><button id="switchToLogin">Have an account?</button></div>
+      </div>
+
+      <div id="loginForm" class="hidden" style="margin-top:8px">
+        <label>Phone number</label>
+        <input id="loginPhone" type="text" placeholder="07xxxxxxxx" />
+        <label>Password</label>
+        <div style="display:flex;gap:8px"><input id="loginPass" type="password" placeholder="Password"/><button id="toggleLoginPass">Show</button></div>
+        <div style="display:flex;gap:8px;margin-top:8px"><button id="loginBtn">Login</button><button id="switchToCreate">Create</button></div>
+      </div>
+
+      <div style="text-align:right;margin-top:8px"><button id="closeAuth">Close</button></div>
+    </div>
+  </div>
+
+  <script>
+  // ----------------- Utilities -----------------
+  function $(id){return document.getElementById(id)}
+  function saveJSON(k,v){localStorage.setItem(k,JSON.stringify(v))}
+  function loadJSON(k,def){try{return JSON.parse(localStorage.getItem(k))||def}catch(e){return def}}
+
+  // ----------------- Users & Auth -----------------
+  const USERS_KEY='aviator_users_v1';
+  const PAST_KEY='aviator_past_v1';
+  let users = loadJSON(USERS_KEY,{});
+
+  function createAccount(name,phone,password){
+    if(!name||!phone||!password) return {ok:false,msg:'fill all'};
+    if(users[phone]) return {ok:false,msg:'phone exists'};
+    users[phone]={name,phone,password,balance:1000};
+    saveJSON(USERS_KEY,users);
+    return {ok:true}
+  }
+  function verifyLogin(phone,password){
+    const u=users[phone];
+    if(!u) return {ok:false,msg:'user not found'};
+    if(u.password!==password) return {ok:false,msg:'wrong password'};
+    return {ok:true,user:u}
+  }
+
+  // Session handling: stored in sessionStorage; cleared when page hidden (app switch)
+  function setCurrentUser(phone){
+    sessionStorage.setItem('aviator_current',phone);
+    $('logoutBtn').classList.remove('hidden');
+    $('loginOpen').classList.add('hidden');
+    renderBalance();
+  }
+  function clearCurrentUser(){
+    sessionStorage.removeItem('aviator_current');
+    $('logoutBtn').classList.add('hidden');
+    $('loginOpen').classList.remove('hidden');
+    renderBalance();
+  }
+
+  document.addEventListener('visibilitychange',()=>{
+    if(document.hidden){ clearCurrentUser(); }
+  });
+
+  // ----------------- Deterministic round & multiplier generator -----------------
+  // Rounds: countdown 5s, flight Xs (8s). Use roundIndex = Math.floor(Date.now()/ROUND_CYCLE_MS)
+  const COUNTDOWN=5; // seconds between rounds
+  const FLIGHT=8; // seconds flight duration
+  const ROUND_MS=(COUNTDOWN+FLIGHT)*1000;
+
+  function mulberry32(a){
+    return function(){
+      var t = a += 0x6D2B79F5;
+      t = Math.imul(t ^ t >>> 15, t | 1);
+      t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    }
+  }
+
+  function getRoundIndex(ts=Date.now()){
+    return Math.floor(ts/ROUND_MS);
+  }
+
+  function generatedMultiplierForRound(roundIndex){
+    // deterministic PRNG based on roundIndex so all clients see same generated multiplier for that round
+    const r = Math.abs(roundIndex) >>> 0;
+    const prng = mulberry32(r+123456);
+    // produce multiplier between 1.1 and 12.0 skewed
+    let x = prng();
+    // use exponential scale so many rounds are low, some high
+    const mult = 1 + Math.pow(x,1.6)*11; // range ~1..12
+    return Math.round(mult*100)/100;
+  }
+
+  // Live multiplier as plane flies (from 1 to generatedMultiplier over FLIGHT seconds)
+  function liveMultiplierForProgress(progress,generated){
+    // progress 0..1
+    return 1 + (generated-1)*progress;
+  }
+
+  // ----------------- Plane animation -----------------
+  const canvas = $('planeCanvas');
+  const ctx = canvas.getContext('2d');
+  function resizeCanvas(){ canvas.width = canvas.clientWidth*devicePixelRatio; canvas.height = canvas.clientHeight*devicePixelRatio; ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0); }
+  window.addEventListener('resize',resizeCanvas); resizeCanvas();
+
+  // plane draw (simple red triangle)
+  function drawPlane(x,y,angle,scale=1){
+    ctx.save(); ctx.translate(x,y); ctx.rotate(angle);
+    ctx.fillStyle='#ff3b3b';
+    ctx.beginPath(); ctx.moveTo(-12*scale,8*scale); ctx.lineTo(18*scale,0); ctx.lineTo(-12*scale,-8*scale); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+
+  let t0 = performance.now();
+  function renderLoop(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    const now = Date.now();
+    const cycleStart = Math.floor(now/ROUND_MS)*ROUND_MS;
+    const roundIndex = getRoundIndex(now);
+    const generated = generatedMultiplierForRound(roundIndex);
+
+    const elapsedAfterCycle = now - cycleStart; // ms
+    let state = 'countdown';
+    let progress=0;
+    if(elapsedAfterCycle >= COUNTDOWN*1000){ state='flying'; progress = (elapsedAfterCycle - COUNTDOWN*1000)/(FLIGHT*1000); if(progress>1) progress=1; }
+
+    // plane path: from left-bottom to 3/4 diagonal then start sinusoidal up/down
+    const area = $('planeArea');
+    const w = canvas.clientWidth; const h = canvas.clientHeight;
+    // normalized progress overall during flight 0..1
+    let planeProgress = state==='countdown' ? 0 : progress;
+    // compute base x,y along diagonal path
+    const diagX = w*0.95; const diagY = h*0.95;
+    let px = 20 + planeProgress*(diagX-40);
+    let py = h-20 - planeProgress*(diagY-40);
+    // when px crosses 3/4 of diagonal, add smooth up/down
+    const threeQ = 0.75;
+    if(planeProgress>threeQ){
+      const extra = (planeProgress-threeQ)/(1-threeQ); // 0..1
+      // gentle sine oscillation
+      py += Math.sin((now/200)+extra*10)*20*(0.6+0.4*extra);
+    }
+
+    // draw multiplier text above plane
+    const liveMult = state==='flying' ? liveMultiplierForProgress(progress,generated) : 1.00;
+    ctx.font = '16px Arial'; ctx.fillStyle='#fff'; ctx.fillText('× '+liveMult.toFixed(2), px+18, py-12);
+
+    drawPlane(px,py,Math.atan2(-1,1)*0.5);
+
+    // render next frame
+    requestAnimationFrame(renderLoop);
+  }
+  requestAnimationFrame(renderLoop);
+
+  // ----------------- Game state: betting logic -----------------
+  let pendingBet = null; // {phone,stake,roundIndex}
+  let activeBet = null; // {phone,stake,roundIndex}
+
+  function updateUI(){
+    const stake = Number($('stakeInput').value)||0;
+    $('betAmount').textContent = stake;
+    const roundIdx = getRoundIndex();
+    const past = loadJSON(PAST_KEY,[]);
+    // render past 10
+    const list = $('pastList'); list.innerHTML='';
+    past.slice(-10).reverse().forEach(m=>{const d = document.createElement('div');d.className='past-item';d.textContent=m;list.appendChild(d)});
+
+    // bet label logic
+    if(activeBet){ $('betLabel').textContent='Cash out'; $('betWrap').querySelector('.bet-box').classList.remove('hidden'); $('betWrap').querySelector('.bet-box').classList.add('active'); }
+    else if(pendingBet){ $('betLabel').textContent='Cancel\nWaiting'; $('betWrap').querySelector('.bet-box').classList.add('waiting'); }
+    else{ $('betLabel').textContent='Bet'; $('betWrap').querySelector('.bet-box').classList.remove('waiting'); }
+
+    renderBalance();
+  }
+
+  function renderBalance(){
+    const phone = sessionStorage.getItem('aviator_current');
+    const balEl = $('balance');
+    if(!phone || !users[phone]){ balEl.textContent='—'; return }
+    balEl.textContent = users[phone].balance;
+  }
+
+  // When round transitions happen: setInterval to check
+  setInterval(()=>{
+    const now = Date.now();
+    const roundStart = Math.floor(now/ROUND_MS)*ROUND_MS;
+    const elapsed = now - roundStart;
+    const inFlight = elapsed >= COUNTDOWN*1000 && elapsed < (COUNTDOWN+FLIGHT)*1000;
+    const roundIndex = getRoundIndex(now);
+
+    // if flight just started, move pending bets to active and deduct balance
+    const prevCheck = loadJSON('aviator_prevcheck',0);
+    if(prevCheck < roundStart && inFlight){
+      // flight began this tick
+      if(pendingBet){
+        // deduct
+        const u = users[pendingBet.phone];
+        if(u && u.balance >= pendingBet.stake){
+          u.balance -= pendingBet.stake;
+          activeBet = {phone:pendingBet.phone,stake:pendingBet.stake,round:pendingBet.round};
+          users[pendingBet.phone]=u; saveJSON(USERS_KEY,users);
+        } else {
+          // insufficient funds -> cancel
+        }
+      }
+    }
+
+    // if flight ended (burst), resolve active bets (lose unless already cashed out) and record generated multiplier
+    const flightEnd = roundStart + (COUNTDOWN+FLIGHT)*1000;
+    if(prevCheck < flightEnd && now >= flightEnd){
+      // flight ended
+      const gen = generatedMultiplierForRound(roundIndex);
+      // record past
+      const past = loadJSON(PAST_KEY,[]);
+      past.push(gen.toFixed(2)+'x'); if(past.length>100) past.shift(); saveJSON(PAST_KEY,past);
+
+      if(activeBet){
+        // if still active (not cashed out) -> lost (nothing to do since stake already deducted)
+        activeBet=null;
+      }
+    }
+
+    saveJSON('aviator_prevcheck',roundStart);
+    updateUI();
+  },300);
+
+  // bet button click handling
+  $('betBtn').addEventListener('click',()=>{
+    const phone = sessionStorage.getItem('aviator_current');
+    if(!phone){ alert('Please login'); return }
+    const stake = Number($('stakeInput').value)||0;
+    if(stake<=0){ alert('Enter stake'); return }
+    if(stake>users[phone].balance){ alert('Stake exceeds balance'); return }
+
+    const now = Date.now(); const roundStart = Math.floor(now/ROUND_MS)*ROUND_MS; const elapsed = now - roundStart;
+    const inCountdown = elapsed < COUNTDOWN*1000;
+    const inFlight = elapsed >= COUNTDOWN*1000 && elapsed < (COUNTDOWN+FLIGHT)*1000;
+
+    if(activeBet && activeBet.phone===phone){
+      // Cash out
+      const gen = generatedMultiplierForRound(activeBet.round);
+      const progress = Math.min(1,(elapsed-COUNTDOWN*1000)/(FLIGHT*1000));
+      const live = liveMultiplierForProgress(progress,gen);
+      const win = Math.round(activeBet.stake * live);
+      users[phone].balance += win; // add winnings
+      saveJSON(USERS_KEY,users); activeBet=null; updateUI(); alert('Cashed out: '+win);
+      return;
+    }
+
+    // If there's a pending bet (same user), pressing bet acts as cancel
+    if(pendingBet && pendingBet.phone===phone){ pendingBet=null; updateUI(); return }
+
+    // create a pending bet for next join
+    pendingBet = {phone,stake,round:getRoundIndex(now)};
+    updateUI();
+  });
+
+  // deposit demo
+  $('depositBtn').addEventListener('click',()=>{
+    const phone = sessionStorage.getItem('aviator_current'); if(!phone){ alert('Login first'); return }
+    users[phone].balance += 500; saveJSON(USERS_KEY,users); renderBalance(); alert('Deposited 500 (demo)');
+  });
+
+  // withdraw behavior
+  $('withdrawBtn').addEventListener('click',()=>{
+    const phone = sessionStorage.getItem('aviator_current'); if(!phone){ alert('Login first'); return }
+    const amount = prompt('Enter withdrawal amount'); const a = Number(amount)||0;
+    if(a<=0) return; if(a>users[phone].balance){ alert('Insufficient'); return }
+    users[phone].balance -= a; saveJSON(USERS_KEY,users); renderBalance(); alert('Withdrawal submitted');
+  });
+
+  // ----------------- Auth UI actions -----------------
+  $('loginOpen').addEventListener('click',()=>{$('authModal').classList.remove('hidden');$('createForm').classList.add('hidden');$('loginForm').classList.remove('hidden')});
+  $('closeAuth').addEventListener('click',()=>{$('authModal').classList.add('hidden')});
+  $('switchToCreate').addEventListener('click',()=>{$('createForm').classList.remove('hidden');$('loginForm').classList.add('hidden')});
+  $('switchToLogin').addEventListener('click',()=>{$('createForm').classList.add('hidden');$('loginForm').classList.remove('hidden')});
+  $('toggleRegPass').addEventListener('click',()=>{ const p=$('regPass'); p.type = p.type==='password' ? 'text':'password'; });
+  $('toggleLoginPass').addEventListener('click',()=>{ const p=$('loginPass'); p.type = p.type==='password' ? 'text':'password'; });
+
+  $('createAccountBtn').addEventListener('click',()=>{
+    const name=$('regName').value.trim(); const phone=$('regPhone').value.trim(); const p1=$('regPass').value; const p2=$('regPass2').value;
+    if(p1!==p2){ alert('Passwords do not match'); return }
+    const res = createAccount(name,phone,p1);
+    if(!res.ok) return alert(res.msg);
+    alert('Account created, please login'); $('authModal').classList.add('hidden');
+  });
+
+  $('loginBtn').addEventListener('click',()=>{
+    const phone=$('loginPhone').value.trim(); const pass=$('loginPass').value;
+    const res = verifyLogin(phone,pass);
+    if(!res.ok) return alert(res.msg);
+    setCurrentUser(phone); $('authModal').classList.add('hidden');
+  });
+
+  $('logoutBtn').addEventListener('click',()=>{ clearCurrentUser(); alert('Logged out'); });
+
+  // initial load: render balance and past
+  (function init(){
+    users = loadJSON(USERS_KEY,{});
+    renderBalance(); updateUI();
+  })();
+  </script>
+</body>
+</html>
