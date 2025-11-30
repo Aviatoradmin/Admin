@@ -57,7 +57,8 @@
     justify-content:center;
     position:relative;
   }
-  /* Removed: canvas#planeCanvas style */
+  /* REMOVED PLANE ANIMATION: Hiding canvas completely */
+  canvas#planeCanvas{width:100%;height:100%;display:none;border-radius:10px}
   .live-mult{position:absolute;left:50%;transform:translateX(-50%);top:18%;background:transparent;padding:6px 10px;border-radius:8px;font-weight:800;font-size:20px}
   .flight-msg{position:absolute;left:12px;top:12px;background:transparent;color:var(--muted);font-size:12px}
   /* bottom controls */
@@ -87,7 +88,7 @@
   /* responsive tweaks */
   @media (max-width:640px){
     .big-right{width:48%}
-    /* Removed: .plane-box height tweak */
+    .plane-box{height:50vh}
   }
 </style>
 </head>
@@ -119,13 +120,15 @@
     <section class="aviator">
       <div class="flight-msg" id="roundStateMsg">Waiting...</div>
       <div class="plane-box">
+        <canvas id="planeCanvas"></canvas>
         <div class="live-mult" id="liveMultiplier">×1.00</div>
       </div>
 
       <div style="padding:8px 2px;">
         <div style="display:flex;justify-content:space-between;align-items:center">
           <div style="font-size:13px;color:var(--muted)">Past 10 multipliers</div>
-          </div>
+          <div style="font-size:13px;color:var(--muted)">Round time: <span id="roundTimer">--</span></div>
+        </div>
         <div class="past-list" id="pastList" style="margin-top:6px"></div>
       </div>
     </section>
@@ -288,7 +291,7 @@
   const statusBox = document.getElementById('statusBox');
   const genIndex = document.getElementById('genIndex');
   const liveMultiplierEl = document.getElementById('liveMultiplier');
-  // Removed: const roundTimer = document.getElementById('roundTimer');
+  const roundTimer = document.getElementById('roundTimer');
   const pastList = document.getElementById('pastList');
   const withdrawBtn = document.getElementById('withdrawBtn');
   const depositBtn = document.getElementById('depositBtn');
@@ -296,7 +299,7 @@
   const plus10 = document.getElementById('plus10');
   const plus50 = document.getElementById('plus50');
   const roundStateMsg = document.getElementById('roundStateMsg');
-  // Removed: const planeCanvas = document.getElementById('planeCanvas');
+  const planeCanvas = document.getElementById('planeCanvas');
 
   // auth fields
   const loginPhone = document.getElementById('loginPhone');
@@ -320,7 +323,17 @@
   let queuedBet = null;
   let activeBet = null;
 
-  // Removed: canvas init and resizeCanvas function
+  // canvas init
+  // REMOVED PLANE ANIMATION: Remove ctx initialization
+  // const ctx = planeCanvas.getContext ? planeCanvas.getContext('2d') : null;
+
+  function resizeCanvas(){
+    // REMOVED PLANE ANIMATION: Removed canvas resize logic
+    // planeCanvas.width = planeCanvas.clientWidth * devicePixelRatio;
+    // planeCanvas.height = planeCanvas.clientHeight * devicePixelRatio;
+    // ctx && ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+  }
+  window.addEventListener('resize', resizeCanvas);
 
   // ********** UTIL **********
   function now(){ return Date.now() }
@@ -552,13 +565,14 @@
 
     // update phase text / timer
     if(info.phase === 'pre'){
-      roundStateMsg.textContent = 'Betting — place stake';
-      // Removed: roundTimer.textContent update
+      // CHANGE 2 & 3: Keep pre-round countdown, change message
+      roundStateMsg.textContent = 'Betting — Next round starts in';
+      roundTimer.textContent = Math.ceil(info.phaseRemaining/1000) + 's';
       liveMultiplierEl.textContent = '×1.00';
-      // if there is a queued bet and the current cycle transitions into flight, we will handle
     } else {
+      // CHANGE 2: Remove countdown during flight
       roundStateMsg.textContent = 'Flight — live';
-      // Removed: roundTimer.textContent update
+      roundTimer.textContent = '--'; // Remove countdown during flight
       const live = getLiveMultiplier(info.phase, info.phaseElapsed, info.generated);
       liveMultiplierEl.textContent = '×' + formatNumber(live);
     }
@@ -611,12 +625,7 @@
   setInterval(mainTick, 120);
 
   // ********** Canvas: plane animation **********
-  // Removed: drawPlane function
-  // Removed: animLoop function
-  // Removed: window.requestAnimationFrame(()=>{ resizeCanvas(); animLoop(); });
-
-  // ********** periodic housekeeping: when flight ends, settle round and push past **********
-  // We use mainTick and the past push logic already handles this.
+  // REMOVED PLANE ANIMATION: Deleted drawPlane and animLoop entirely.
 
   // ********** UI actions **********
   withdrawBtn.addEventListener('click', ()=>{ alert('Withdrawal clicked (dummy). GitHub will log the click.'); });
@@ -656,6 +665,9 @@
     updateBetUI();
   }
   init();
+
+  // REMOVED PLANE ANIMATION: Remove animation start line
+  // window.requestAnimationFrame(()=>{ resizeCanvas(); animLoop(); });
 
   // onbeforeunload -> require login again if they close tab? User wants to re-login when visiting other apps.
   // We'll preserve session but require login if they explicitly log out. The user asked: "Ask to log in again if someone Log out Visit other apps Visit other links" — we can't detect app switching; but leaving page and returning keeps session. If they want always re-login we could clear session on visibilitychange hidden; but that would be annoying. We'll clear session on pagehide to match their note that visiting other apps should ask login.
