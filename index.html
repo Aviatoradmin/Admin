@@ -127,7 +127,7 @@
       <div style="padding:8px 2px;">
         <div style="display:flex;justify-content:space-between;align-items:center">
           <div style="font-size:13px;color:var(--muted)">Past 10 multipliers</div>
-          <div style="font-size:13px;color:var(--muted)">Round time: <span id="roundTimer">--</span></div>
+          <div id="countdownBox" style="font-size:13px;color:var(--muted)">Round time: <span id="roundTimer">--</span></div>
         </div>
         <div class="past-list" id="pastList" style="margin-top:6px"></div>
       </div>
@@ -302,6 +302,7 @@
   const plus50 = document.getElementById('plus50');
   const roundStateMsg = document.getElementById('roundStateMsg');
   const planeCanvas = document.getElementById('planeCanvas');
+  const countdownBox = document.getElementById('countdownBox'); // Added for the hide/show logic
 
   // auth fields
   const loginPhone = document.getElementById('loginPhone');
@@ -371,7 +372,7 @@
     // To implement variable length, we must calculate the exact start time of *every* round.
     
     // We'll calculate the list of all cycle start times (relative to a fixed epoch, like when the app first ran)
-    // NOTE: This array needs to be recalculated only when multipliers change, but we'll do it once.
+    // NOTE: This array needs to be recalculated only when multipliers changes, but we'll do it once.
     // We will assume the cycle starts relative to the epoch time 0 (1970).
     // In a real game, the server tells the client the start time of the *next* round.
     
@@ -633,18 +634,31 @@
     // update past list rendering
     renderPast();
 
-    // update phase text / timer
+    // ************* FEATURE 1 & 2 IMPLEMENTATION *************
     if(info.phase === 'pre'){
-      roundStateMsg.textContent = 'Betting — Next round starts in';
+      // 2. Rename 5 second countdown to "Draw in (value countdown)"
+      roundStateMsg.textContent = 'Betting — Draw in'; 
       roundTimer.textContent = Math.ceil(info.phaseRemaining/1000) + 's';
       liveMultiplierEl.textContent = '×1.00';
-    } else {
-      roundStateMsg.textContent = 'Flight — live';
-      // Display the actual flight time dynamically during flight
-      roundTimer.textContent = (info.FLIGHT_ACTUAL / 1000).toFixed(2) + 's'; 
-      const live = getLiveMultiplier(info.phase, info.phaseElapsed, info.generated, info.FLIGHT_ACTUAL);
-      liveMultiplierEl.textContent = '×' + formatNumber(live);
+      // Show countdown during pre-round
+      countdownBox.style.display = 'block'; 
+    } else { // info.phase === 'flight' or 'ended'
+      // 1. Hide round countdown during flight (everything including the name)
+      countdownBox.style.display = 'none'; 
+      
+      if(info.phase === 'flight') {
+        roundStateMsg.textContent = 'Flight — live';
+        // Display the actual flight time dynamically during flight (although hidden)
+        roundTimer.textContent = (info.FLIGHT_ACTUAL / 1000).toFixed(2) + 's'; 
+        const live = getLiveMultiplier(info.phase, info.phaseElapsed, info.generated, info.FLIGHT_ACTUAL);
+        liveMultiplierEl.textContent = '×' + formatNumber(live);
+      } else { // info.phase === 'ended'
+        roundStateMsg.textContent = 'Waiting...';
+        liveMultiplierEl.textContent = '×1.00';
+      }
     }
+    // ********************************************************
+
 
     // phase transitions
     if(lastRoundIndex === null) lastRoundIndex = idx;
@@ -764,4 +778,4 @@
 })();
 </script>
 </body>
-          </html>
+  </html>
