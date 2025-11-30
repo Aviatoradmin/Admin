@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Aviator</title>
+<title>Aviator Demo</title>
 <style>
   :root{
     --bg:#0b0b0b;
@@ -13,385 +13,278 @@
     --yellow:#f0c000;
     --red:#d9534f;
   }
-  body{ margin:0; font-family:sans-serif; background:var(--bg); color:#fff; }
-  #app{ display:none; flex-direction:column; align-items:center; padding:10px; }
-  .bet-button{ padding:10px 20px; margin:5px; cursor:pointer; }
-  .bet-button.bet{ background:var(--accent); color:#000; }
-  .bet-button.yellow{ background:var(--yellow); color:#000; }
-  .bet-button.cancel{ background:var(--red); color:#fff; }
-  #authOverlay{ display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); justify-content:center; align-items:center; }
-  #authOverlay div{ background:#222; padding:20px; border-radius:5px; }
-  input{ padding:5px; margin:3px; }
-  #pastList{ display:flex; flex-wrap:wrap; justify-content:center; margin:5px; }
-  .past-item{ margin:2px 4px; background:#222; padding:3px 6px; border-radius:3px; }
+  body{margin:0;font-family:sans-serif;background:var(--bg);color:#fff}
+  #app{display:none;flex-direction:column;align-items:center;justify-content:flex-start;height:100vh;padding:12px;box-sizing:border-box;}
+  .header,.controls{width:100%;max-width:480px;margin-bottom:12px;}
+  .header div,.controls div{margin-bottom:6px;}
+  .big-left,.big-right{flex:1;display:flex;flex-direction:column;}
+  .stake-box input{width:100%;padding:6px;}
+  .deposit-btn{background:var(--accent);color:#fff;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;}
+  .bet-button{padding:6px 12px;border-radius:4px;cursor:pointer;text-align:center;}
+  .bet-button.bet{background:var(--accent);}
+  .bet-button.cancel{background:var(--red);}
+  .bet-button.yellow{background:var(--yellow);}
+  .past-item{font-size:13px;color:var(--muted);}
+  .overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;}
+  .card{background:var(--panel);padding:12px;border-radius:8px;width:320px;max-width:90%;}
+  .form-row{margin-bottom:8px;}
+  .row-h{display:flex;gap:8px;}
+  input{width:100%;padding:6px;border-radius:4px;border:none;}
+  .linkish{color:var(--yellow);cursor:pointer;font-size:12px;}
+  .footer-note{text-align:center;font-size:12px;margin-top:12px;color:var(--muted);}
 </style>
 </head>
 <body>
 <div id="loading">Loading...</div>
 <div id="app">
-  <div>
-    <span id="sessionName"></span>
-    <button id="loginBtn">Login</button>
-    <button id="logoutBtn" style="display:none;">Logout</button>
+  <div class="header">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <div>Balance: <span id="balanceBox">1000</span></div>
+      <div>
+        <span id="sessionName" style="display:none">Hi, <span id="userNameTxt"></span></span>
+        <button id="loginBtn" class="deposit-btn">Login</button>
+        <button id="logoutBtn" class="deposit-btn" style="display:none">Logout</button>
+      </div>
+    </div>
+    <div style="font-size:13px;color:var(--muted)">Past 10 multipliers</div>
+    <div style="font-size:13px;color:var(--muted)">Round time: <span id="roundTimer">--</span></div>
+    <div class="past-list" id="pastList" style="margin-top:6px"></div>
   </div>
-  <div>
-    Balance: <span id="balanceBox">0</span>
-  </div>
-  <div>
-    Stake: <input type="number" id="stakeInput" value="10" min="1">
-    <button id="plus10">+10</button>
-    <button id="plus50">+50</button>
-    <button id="maxBtn">Max</button>
-  </div>
-  <div>
-    <button id="betButton" class="bet-button bet">Bet</button>
-    Current Bet: <span id="betAmount">0</span>
-  </div>
-  <div>
-    <div id="roundStateMsg">Betting — place stake</div>
-    <div>Next round in: <span id="roundTimer">0s</span></div>
-    <div>Live Multiplier: <span id="liveMultiplier">×1.00</span></div>
-  </div>
-  <div id="pastList"></div>
-  <div>
-    <button id="withdrawBtn">Withdraw</button>
-    <button id="depositBtn">Deposit</button>
-  </div>
-  <div id="statusBox"></div>
+
+  <section class="controls">
+    <div class="big-left">
+      <div class="stake-box">
+        <div style="font-size:13px;color:var(--muted)">Stake</div>
+        <input id="stakeInput" type="number" placeholder="Enter stake amount" min="1" />
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button id="maxBtn" class="deposit-btn">Max</button>
+          <button id="plus10" class="deposit-btn">+10</button>
+          <button id="plus50" class="deposit-btn">+50</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <div class="bet-box" style="flex:1">
+          <div style="font-size:12px;color:var(--muted)">Bet</div>
+          <div id="betAmount" style="font-weight:800;font-size:18px">0</div>
+        </div>
+        <div id="betButton" class="bet-button bet" style="width:150px;display:flex;align-items:center;justify-content:center">Bet</div>
+      </div>
+    </div>
+
+    <div class="big-right">
+      <div style="display:flex;gap:8px;align-items:center;justify-content:space-between">
+        <div style="font-size:13px;color:var(--muted)">Deposit</div>
+        <div class="deposit-btn" id="depositBtn">Deposit</div>
+      </div>
+      <div style="margin-top:8px">
+        <div style="font-size:13px;color:var(--muted)">Status</div>
+        <div id="statusBox" style="background:#07121a;padding:8px;border-radius:8px;margin-top:6px">Idle</div>
+      </div>
+    </div>
+  </section>
+
+  <div id="roundStateMsg" style="margin-bottom:6px;font-size:14px"></div>
+
+  <div class="footer-note">We keep your data secure and confidential. (Win_Big)</div>
 </div>
 
-<div id="authOverlay">
-  <div>
-    <h3 id="authTitle">Login</h3>
+<!-- Login / register overlay -->
+<div id="authOverlay" class="overlay" style="display:none">
+  <div class="card">
+    <div class="top-controls">
+      <strong id="authTitle">Login</strong>
+      <div><button id="closeAuth" class="linkish">Close</button></div>
+    </div>
+
     <div id="loginForm">
-      Phone: <input id="loginPhone"><br>
-      Password: <input id="loginPass" type="password"><br>
-      <button id="doLogin">Login</button>
-      <a href="#" id="showRegister">Create account</a>
+      <div class="form-row">
+        <label>Phone number</label>
+        <input id="loginPhone" placeholder="07XXXXXXXX" />
+      </div>
+      <div class="form-row">
+        <label>Password</label>
+        <input id="loginPass" type="password" />
+      </div>
+      <div style="display:flex;gap:8px;justify-content:space-between">
+        <div class="small linkish" id="showRegister">Create account</div>
+        <button id="doLogin" class="deposit-btn">Login</button>
+      </div>
+      <div style="margin-top:8px;color:var(--muted);font-size:13px">Save password to browser is optional (use browser prompt).</div>
     </div>
-    <div id="registerForm" style="display:none;">
-      Name: <input id="regName"><br>
-      Phone: <input id="regPhone"><br>
-      Password: <input id="regPass" type="password"><br>
-      Confirm: <input id="regPass2" type="password"><br>
-      <button id="doRegister">Register</button>
-      <a href="#" id="showLogin">Login</a>
+
+    <div id="registerForm" style="display:none">
+      <div class="form-row">
+        <label>Full name</label>
+        <input id="regName" placeholder="Your name" />
+      </div>
+      <div class="form-row">
+        <label>Phone number</label>
+        <input id="regPhone" placeholder="07XXXXXXXX" />
+      </div>
+      <div class="row-h">
+        <div style="flex:1" class="form-row">
+          <label>Password</label>
+          <input id="regPass" type="password" />
+        </div>
+        <div style="flex:1" class="form-row">
+          <label>Confirm</label>
+          <input id="regPass2" type="password" />
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:space-between">
+        <div class="small linkish" id="showLogin">Already have account?</div>
+        <button id="doRegister" class="deposit-btn">Create</button>
+      </div>
+      <div style="margin-top:8px;color:var(--muted);font-size:13px">New accounts start with 1000 balance.</div>
     </div>
-    <button id="closeAuth">Close</button>
   </div>
 </div>
 
 <script>
 (() => {
-const DEFAULT_BALANCE = 1000;
-const CYCLE = 10000; // 10s per round
-const PRE_ROUND = 5000; // 5s betting
-const FLIGHT = 5000; // flight duration
-const TOTAL = 250;
-const MULTIPLIERS = Array.from({length:TOTAL},()=>1+Math.random()*5);
+  const PRE_ROUND = 5_000;  
+  const FLIGHT = 5_000;     
+  const CYCLE = PRE_ROUND + FLIGHT; 
+  const DEFAULT_BALANCE = 1000;
+  const MULTIPLIERS = [1.27,2.14,1.03,3.82,7.41,1.56,1.11,4.27,12.49,1.24,2.71,1.09,8.35,1.63,1.02,5.42,2.03,1.18,3.54,10.83,
+    1.15,1.07,6.48,2.32,1.95,1.04,1.34,9.64,1.13,3.09,1.26,4.91,2.67,1.08,1.52,1.21,14.72,1.03,2.18,1.09,
+    1.88,3.47,1.06,7.22,1.24,1.11,2.97,5.84,1.04,18.93,1.27,1.18,4.48,1.06,2.54,1.77,8.92,1.39,1.08,3.63,
+    1.14,1.04,22.41,1.57,2.01,1.07,4.12,6.83,1.09,1.28,3.96,2.38,1.05,1.16,15.74,1.23,1.02,9.83,2.91,1.31,
+    1.18,4.34,1.47,1.06,13.56,1.09,2.26,1.04,6.37,3.04,1.07,1.12,5.78,2.79,1.03,1.61,12.84,1.05,4.53,1.07,
+    1.32,6.92,1.14,1.03,24.61,1.19,2.47,1.08,3.26,1.51,1.11,11.77,1.09,1.04,4.16,2.94,1.07,1.15,7.41,3.84,
+    1.05,1.32,10.34,1.29,2.11,1.04,4.07,1.62,1.06,18.47,1.13,1.07,5.59,3.17,1.05,1.26,8.92,1.03,1.18,12.33,
+    1.21,1.09,4.67,2.61,1.06,1.03,6.44,1.88,1.05,1.17,14.85,1.04,2.36,1.06,3.77,1.58,1.07,16.23,1.31,1.03,
+    7.29,2.41,1.09,1.12,5.42,3.98,1.07,1.23,9.14,1.05,1.04,11.81,1.32,1.14,4.84,2.33,1.06,1.03,7.62,4.91,
+    1.08,1.17,12.47,1.03,3.72,1.26,2.05,1.04,1.14,25.93,1.36,1.07,4.53,3.64,1.05,1.12,6.21,1.09,1.04,8.71,
+    1.26,1.05,5.32,2.47,1.07,1.11,14.31,1.03,1.07,10.57,1.19,1.14,4.91,3.53,1.04,1.26,9.07,1.03,1.18,13.24,
+    1.39,1.06,4.62,2.83,1.07,1.03,6.97,1.92,1.05,1.21,18.61,1.06,3.22,1.15,2.41,1.05,1.08,11.39,1.12,1.03,
+    8.51,1.28,1.04,4.17,3.11,1.06,1.18,7.73,1.04,1.29];
+  const TOTAL = MULTIPLIERS.length;
+  const key_accounts = 'avi_accounts';
+  const key_session = 'avi_session';
+  const key_past = 'avi_past';
 
-// ********** STORAGE HELPERS **********
-const key_accounts = 'avi_accounts';
-const key_session = 'avi_session';
-const key_past = 'avi_past';
-function loadAccounts(){ try { return JSON.parse(localStorage.getItem(key_accounts) || '{}') } catch(e){return {}}}
-function saveAccounts(obj){ localStorage.setItem(key_accounts, JSON.stringify(obj)) }
-function setSession(phone){ localStorage.setItem(key_session, phone) }
-function clearSession(){ localStorage.removeItem(key_session) }
-function getSession(){ return localStorage.getItem(key_session) }
-function loadPast(){ try { return JSON.parse(localStorage.getItem(key_past) || '[]') } catch(e){return []}}
-function savePast(arr){ localStorage.setItem(key_past, JSON.stringify(arr.slice(0,100))) }
+  function loadAccounts(){ try { return JSON.parse(localStorage.getItem(key_accounts) || '{}') } catch(e){return {}}}
+  function saveAccounts(obj){ localStorage.setItem(key_accounts, JSON.stringify(obj)) }
+  function setSession(phone){ localStorage.setItem(key_session, phone) }
+  function clearSession(){ localStorage.removeItem(key_session) }
+  function getSession(){ return localStorage.getItem(key_session) }
+  function loadPast(){ try { return JSON.parse(localStorage.getItem(key_past) || '[]') } catch(e){return []}}
+  function savePast(arr){ localStorage.setItem(key_past, JSON.stringify(arr.slice(0,100))) }
 
-// ********** DOM **********
-const app = document.getElementById('app');
-const loading = document.getElementById('loading');
-const loginBtn = document.getElementById('loginBtn');
-const logoutBtn = document.getElementById('logoutBtn');
-const authOverlay = document.getElementById('authOverlay');
-const authTitle = document.getElementById('authTitle');
-const loginForm = document.getElementById('loginForm');
-const registerForm = document.getElementById('registerForm');
-const showRegister = document.getElementById('showRegister');
-const showLogin = document.getElementById('showLogin');
-const doLogin = document.getElementById('doLogin');
-const doRegister = document.getElementById('doRegister');
-const closeAuth = document.getElementById('closeAuth');
-const sessionName = document.getElementById('sessionName');
-const userNameTxt = document.getElementById('userNameTxt');
-const balanceBox = document.getElementById('balanceBox');
-const stakeInput = document.getElementById('stakeInput');
-const betButton = document.getElementById('betButton');
-const betAmount = document.getElementById('betAmount');
-const statusBox = document.getElementById('statusBox');
-const genIndex = document.getElementById('genIndex');
-const liveMultiplierEl = document.getElementById('liveMultiplier');
-const roundTimer = document.getElementById('roundTimer');
-const pastList = document.getElementById('pastList');
-const withdrawBtn = document.getElementById('withdrawBtn');
-const depositBtn = document.getElementById('depositBtn');
-const maxBtn = document.getElementById('maxBtn');
-const plus10 = document.getElementById('plus10');
-const plus50 = document.getElementById('plus50');
+  const app = document.getElementById('app');
+  const loading = document.getElementById('loading');
+  const loginBtn = document.getElementById('loginBtn');
+  const logoutBtn = document.getElementById('logoutBtn');
+  const authOverlay = document.getElementById('authOverlay');
+  const authTitle = document.getElementById('authTitle');
+  const loginForm = document.getElementById('loginForm');
+  const registerForm = document.getElementById('registerForm');
+  const showRegister = document.getElementById('showRegister');
+  const showLogin = document.getElementById('showLogin');
+  const doLogin = document.getElementById('doLogin');
+  const doRegister = document.getElementById('doRegister');
+  const closeAuth = document.getElementById('closeAuth');
+  const sessionName = document.getElementById('sessionName');
+  const userNameTxt = document.getElementById('userNameTxt');
+  const balanceBox = document.getElementById('balanceBox');
+  const stakeInput = document.getElementById('stakeInput');
+  const betButton = document.getElementById('betButton');
+  const betAmount = document.getElementById('betAmount');
+  const statusBox = document.getElementById('statusBox');
+  const genIndex = document.getElementById('genIndex');
+  const liveMultiplierEl = document.getElementById('liveMultiplier');
+  const roundTimer = document.getElementById('roundTimer');
+  const pastList = document.getElementById('pastList');
+  const withdrawBtn = document.getElementById('withdrawBtn');
+  const depositBtn = document.getElementById('depositBtn');
+  const maxBtn = document.getElementById('maxBtn');
+  const plus10 = document.getElementById('plus10');
+  const plus50 = document.getElementById('plus50');
+  const roundStateMsg = document.getElementById('roundStateMsg');
 
-// auth fields
-const loginPhone = document.getElementById('loginPhone');
-const loginPass = document.getElementById('loginPass');
-const regName = document.getElementById('regName');
-const regPhone = document.getElementById('regPhone');
-const regPass = document.getElementById('regPass');
-const regPass2 = document.getElementById('regPass2');
-const showRegisterLink = showRegister;
-const showLoginLink = showLogin;
+  let accounts = loadAccounts();
+  let past = loadPast();
+  let currentUser = getSession();
+  let userObj = currentUser ? accounts[currentUser] : null;
 
-// ********** APP STATE **********
-let accounts = loadAccounts();
-let past = loadPast();
-let currentUser = getSession();
-let userObj = currentUser ? accounts[currentUser] : null;
-let queuedBet = null;
-let activeBet = null;
+  let queuedBet = null;
+  let activeBet = null;
 
-// ********** UTIL **********
-function now(){ return Date.now() }
-function formatNumber(n){ return Number(n).toFixed(2) }
-function safeNum(v){ return Math.max(0, Number(v) || 0) }
-function ensureAccount(phone){
-  accounts = loadAccounts();
-  if(!accounts[phone]){
-    accounts[phone] = { name: phone, phone, pass: '', balance: DEFAULT_BALANCE };
-    saveAccounts(accounts);
-  }
-  return accounts[phone];
-}
+  function now(){ return Date.now() }
+  function formatNumber(n){ return Number(n).toFixed(2) }
+  function safeNum(v){ return Math.max(0, Number(v) || 0) }
 
-// ********** ROUND / MULTIPLIER **********
-function getRoundIndexForTime(t){
-  const idx = Math.floor(t / CYCLE) % TOTAL;
-  return idx;
-}
-function getCurrentRoundInfo(){
-  const t = now();
-  const cycleIndex = Math.floor(t / CYCLE);
-  const roundIndex = cycleIndex % TOTAL;
-  const cycleStart = cycleIndex * CYCLE;
-  const elapsed = t - cycleStart;
-  const phase = (elapsed < PRE_ROUND) ? 'pre' : 'flight';
-  const phaseElapsed = (phase==='pre')? elapsed : (elapsed-PRE_ROUND);
-  const phaseRemaining = (phase==='pre')? (PRE_ROUND - elapsed) : (CYCLE - elapsed);
-  const generated = MULTIPLIERS[roundIndex];
-  return { roundIndex, generated, phase, phaseElapsed, phaseRemaining, elapsed, cycleStart };
-}
-function getLiveMultiplier(phase, phaseElapsed, generated){
-  if(phase!=='flight') return 1.00;
-  const t = Math.max(0, Math.min(phaseElapsed, FLIGHT));
-  const ratio = t / FLIGHT;
-  return 1 + (generated-1)*ratio;
-}
-
-// ********** PAST LIST **********
-function pushPast(mult){ past.unshift(Number(mult)); if(past.length>50) past.length=50; savePast(past); renderPast(); }
-function renderPast(){ pastList.innerHTML=''; for(let i=0;i<Math.min(10,past.length);i++){ const v=past[i]; const el=document.createElement('div'); el.className='past-item'; el.textContent='×'+formatNumber(v); pastList.appendChild(el); } }
-
-// ********** UI / SESSION **********
-function refreshSession(){
-  currentUser = getSession();
-  userObj = currentUser ? accounts[currentUser] : null;
-  if(userObj){
-    sessionName.style.display='inline-block';
-    sessionName.textContent = userObj.name || userObj.phone;
-    loginBtn.style.display='none';
-    logoutBtn.style.display='inline-block';
-    balanceBox.textContent = String(userObj.balance);
-  } else {
-    sessionName.style.display='none';
-    loginBtn.style.display='inline-block';
-    logoutBtn.style.display='none';
-    balanceBox.textContent = String(DEFAULT_BALANCE);
-  }
-}
-
-// ********** AUTH HANDLERS **********
-loginBtn.addEventListener('click', ()=>{ openAuth('login') });
-closeAuth.addEventListener('click', ()=>{ closeAuthOverlay() });
-logoutBtn.addEventListener('click', ()=>{
-  clearSession(); queuedBet=null; activeBet=null;
-  statusBox.textContent='Logged out';
-  refreshSession();
-});
-showRegisterLink.addEventListener('click', ()=>{ openAuth('register') });
-showLoginLink.addEventListener('click', ()=>{ openAuth('login') });
-function openAuth(mode='login'){
-  authOverlay.style.display='flex';
-  if(mode==='login'){ authTitle.textContent='Login'; loginForm.style.display='block'; registerForm.style.display='none'; }
-  else{ authTitle.textContent='Create account'; loginForm.style.display='none'; registerForm.style.display='block'; }
-}
-function closeAuthOverlay(){ authOverlay.style.display='none'; }
-
-doRegister.addEventListener('click', ()=>{
-  const name = regName.value.trim() || regPhone.value.trim();
-  const phone = regPhone.value.trim();
-  const p1 = regPass.value;
-  const p2 = regPass2.value;
-  if(!phone){ alert('Enter phone'); return; }
-  if(!p1 || p1.length<3){ alert('Password too short'); return; }
-  if(p1!==p2){ alert('Passwords do not match'); return; }
-  accounts = loadAccounts();
-  if(accounts[phone]){ alert('Account exists'); return; }
-  accounts[phone] = { name, phone, pass:p1, balance:DEFAULT_BALANCE };
-  saveAccounts(accounts);
-  setSession(phone);
-  closeAuthOverlay();
-  refreshSession();
-});
-
-doLogin.addEventListener('click', ()=>{
-  const phone = loginPhone.value.trim();
-  const pass = loginPass.value;
-  if(!phone || !pass){ alert('Enter phone and password'); return; }
-  accounts = loadAccounts();
-  const acc = accounts[phone];
-  if(!acc){ alert('No account found'); return; }
-  if(acc.pass!==pass){ alert('Password incorrect'); return; }
-  setSession(phone);
-  closeAuthOverlay();
-  refreshSession();
-});
-
-// ********** BET / STAKE LOGIC **********
-function updateBetUI(){
-  betAmount.textContent = queuedBet ? queuedBet.amount : (activeBet? activeBet.amount : 0);
-  if(activeBet){ betButton.className='bet-button yellow'; betButton.textContent='Cash out'; }
-  else if(queuedBet){ betButton.className='bet-button cancel'; betButton.textContent='Cancel'; }
-  else{ betButton.className='bet-button bet'; betButton.textContent='Bet'; }
-}
-function deductForActive(amt){
-  accounts = loadAccounts();
-  accounts[currentUser].balance = Number(accounts[currentUser].balance) - amt;
-  saveAccounts(accounts);
-  userObj = accounts[currentUser];
-  balanceBox.textContent = String(Math.round(userObj.balance*100)/100);
-}
-
-betButton.addEventListener('click', ()=>{
-  if(!currentUser){ openAuth('login'); return; }
-  const stake = safeNum(stakeInput.value);
-  if(betButton.classList.contains('bet')){
-    if(stake<=0){ alert('Enter stake'); return; }
-    if(stake>userObj.balance){ alert('Stake must be <= balance'); return; }
-    queuedBet={ amount: stake };
-    statusBox.textContent='Queued for next round. You may cancel before flight starts.';
-    updateBetUI();
-  } else if(betButton.classList.contains('cancel')){
-    queuedBet=null;
-    statusBox.textContent='Bet cancelled';
-    updateBetUI();
-  } else if(betButton.classList.contains('yellow')){
-    if(!activeBet) return;
-    const ri = activeBet.roundIndex;
-    const generated = MULTIPLIERS[ri];
-    const info = getCurrentRoundInfo();
-    const live = getLiveMultiplier(info.phase, info.phaseElapsed, generated);
-    const win = activeBet.amount * live;
+  function ensureAccount(phone){
     accounts = loadAccounts();
-    accounts[currentUser].balance = Number(accounts[currentUser].balance) + win;
-    saveAccounts(accounts);
-    userObj = accounts[currentUser];
-    activeBet=null;
-    statusBox.textContent='Cashed out: ×'+formatNumber(live)+' → +'+formatNumber(win);
-    balanceBox.textContent=String(Math.round(userObj.balance*100)/100);
-    updateBetUI();
-  }
-});
-
-// ********** MAIN LOOP **********
-let lastRoundIndex = null;
-function mainTick(){
-  const info = getCurrentRoundInfo();
-  const idx = info.roundIndex;
-  genIndex && (genIndex.textContent = idx+1);
-  renderPast();
-  if(info.phase==='pre'){
-    roundStateMsg.textContent='Betting — place stake';
-    roundTimer.textContent=Math.ceil(info.phaseRemaining/1000)+'s';
-    liveMultiplierEl.textContent='×1.00';
-  } else {
-    // Flight countdown removed
-    roundStateMsg.textContent='Flight — live';
-    liveMultiplierEl.textContent='×'+formatNumber(getLiveMultiplier(info.phase, info.phaseElapsed, info.generated));
+    if(!accounts[phone]){
+      accounts[phone] = { name: phone, phone, pass: '', balance: DEFAULT_BALANCE };
+      saveAccounts(accounts);
+    }
+    return accounts[phone];
   }
 
-  if(lastRoundIndex===null) lastRoundIndex=idx;
-  if(idx!==lastRoundIndex){
-    const prevGen = MULTIPLIERS[lastRoundIndex];
-    pushPast(prevGen);
-    activeBet=null;
+  function getRoundIndexForTime(t){
+    const idx = Math.floor(t / CYCLE) % TOTAL;
+    return idx;
   }
 
-  if(info.phase==='flight'){
-    if(queuedBet && !activeBet){
-      activeBet={ amount: queuedBet.amount, roundIndex: idx };
-      queuedBet=null;
-      if(currentUser){ deductForActive(activeBet.amount); statusBox.textContent='Bet active — good luck'; }
-      else{ activeBet=null; statusBox.textContent='No session — bet cancelled'; }
+  function getCurrentRoundInfo(){
+    const t = now();
+    const cycleIndex = Math.floor(t / CYCLE);
+    const roundIndex = cycleIndex % TOTAL;
+    const cycleStart = cycleIndex * CYCLE;
+    const elapsed = t - cycleStart;
+    const phase = (elapsed < PRE_ROUND) ? 'pre' : 'flight';
+    const phaseElapsed = (phase === 'pre') ? elapsed : (elapsed - PRE_ROUND);
+    const phaseRemaining = (phase === 'pre') ? (PRE_ROUND - elapsed) : 0; // flight countdown hidden
+    const generated = MULTIPLIERS[roundIndex];
+    return {
+      roundIndex,
+      generated,
+      phase,
+      phaseElapsed,
+      phaseRemaining,
+      elapsed,
+      cycleStart
+    };
+  }
+
+  function pushPast(mult){
+    past.unshift(Number(mult));
+    if(past.length>50) past.length=50;
+    savePast(past);
+    renderPast();
+  }
+  function renderPast(){
+    pastList.innerHTML = '';
+    for(let i=0;i<Math.min(10,past.length);i++){
+      const v = past[i];
+      const el = document.createElement('div');
+      el.className='past-item';
+      el.textContent = '×' + formatNumber(v);
+      pastList.appendChild(el);
     }
   }
 
-  updateBetUI();
-  lastRoundIndex=idx;
-}
-
-setInterval(mainTick,120);
-
-// ********** UI ACTIONS **********
-withdrawBtn.addEventListener('click', ()=>{ alert('Withdrawal clicked (dummy).'); });
-depositBtn.addEventListener('click', ()=>{
-  if(!currentUser){ openAuth('login'); return; }
-  const amt = Number(prompt('Enter amount to deposit :', '100')) || 0;
-  if(amt===0) return;
-  accounts = loadAccounts();
-  accounts[currentUser].balance = Number(accounts[currentUser].balance) + amt;
-  saveAccounts(accounts);
-  userObj = accounts[currentUser];
-  balanceBox.textContent = String(Math.round(userObj.balance*100)/100);
-  statusBox.textContent='Deposited '+amt;
-});
-maxBtn.addEventListener('click', ()=>{
-  if(!currentUser){ openAuth('login'); return; }
-  accounts = loadAccounts();
-  const bal = accounts[currentUser].balance || DEFAULT_BALANCE;
-  stakeInput.value = bal;
-});
-plus10.addEventListener('click', ()=>{ stakeInput.value = safeNum(stakeInput.value)+10; });
-plus50.addEventListener('click', ()=>{ stakeInput.value = safeNum(stakeInput.value)+50; });
-stakeInput.addEventListener('input', ()=>{ betAmount.textContent = queuedBet ? queuedBet.amount : (activeBet? activeBet.amount : safeNum(stakeInput.value)); });
-
-// ********** INIT **********
-function init(){
-  accounts = loadAccounts();
-  past = loadPast();
-  refreshSession();
-  renderPast();
-  loading.style.display='none';
-  app.style.display='flex';
-  updateBetUI();
-}
-init();
-
-document.addEventListener('visibilitychange', ()=>{
-  if(document.hidden){
-    clearSession();
-    refreshSession();
-    statusBox.textContent='Session cleared while away; please login again.';
+  function refreshSession(){
+    currentUser = getSession();
+    userObj = currentUser ? (accounts[currentUser]) : null;
+    if(userObj){
+      sessionName.style.display='inline-block';
+      userNameTxt.textContent = userObj.name || userObj.phone;
+      loginBtn.style.display='none';
+      logoutBtn.style.display='inline-block';
+      balanceBox.textContent = String(userObj.balance);
+    } else {
+      sessionName.style.display='none';
+      loginBtn.style.display='inline-block';
+      logoutBtn.style.display='none';
+      balanceBox.textContent = '1000';
+    }
   }
-});
 
-if(!past || past.length===0){
-  for(let i=0;i<6;i++) pushPast(MULTIPLIERS[(TOTAL-1-i+TOTAL)%TOTAL]);
-}
-setInterval(()=>{ accounts=loadAccounts(); if(currentUser){ userObj=accounts[currentUser]; if(userObj) balanceBox.textContent=String(Math.round(userObj.balance*100)/100); } },2000);
-
-console.log('Aviator demo initialized. Rounds every '+(CYCLE/1000)+'s. Total multipliers:',TOTAL);
-})();
-</script>
-</body>
-</html>
+  loginBtn.addEventListener('click', ()=>{ openAuth('login') });
+  closeAuth.addEventListener('click', ()=>{ closeAuthOverlay() });
+  logoutBtn.addEventListener('click', ()=>{
+    clearSession();
