@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Aviator Demo</title>
+<title>Aviator</title>
 <style>
   :root{
     --bg:#0b0b0b;
@@ -12,83 +12,162 @@
     --muted:#888;
     --yellow:#f0c000;
     --red:#d9534f;
+    --blue:#2a9df4;
+    --green:#2ecc71;
+    --white:#fff;
+    --card-radius:12px;
   }
-  body{margin:0;font-family:sans-serif;background:var(--bg);color:#fff}
-  #app{display:none;flex-direction:column;align-items:center;justify-content:flex-start;height:100vh;padding:12px;box-sizing:border-box;}
-  .header,.controls{width:100%;max-width:480px;margin-bottom:12px;}
-  .header div,.controls div{margin-bottom:6px;}
-  .big-left,.big-right{flex:1;display:flex;flex-direction:column;}
-  .stake-box input{width:100%;padding:6px;}
-  .deposit-btn{background:var(--accent);color:#fff;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;}
-  .bet-button{padding:6px 12px;border-radius:4px;cursor:pointer;text-align:center;}
-  .bet-button.bet{background:var(--accent);}
-  .bet-button.cancel{background:var(--red);}
-  .bet-button.yellow{background:var(--yellow);}
-  .past-item{font-size:13px;color:var(--muted);}
-  .overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;}
-  .card{background:var(--panel);padding:12px;border-radius:8px;width:320px;max-width:90%;}
-  .form-row{margin-bottom:8px;}
-  .row-h{display:flex;gap:8px;}
-  input{width:100%;padding:6px;border-radius:4px;border:none;}
-  .linkish{color:var(--yellow);cursor:pointer;font-size:12px;}
-  .footer-note{text-align:center;font-size:12px;margin-top:12px;color:var(--muted);}
+  html,body{height:100%;margin:0;font-family:Inter,system-ui,Arial;background:var(--bg);color:var(--white)}
+  .app{
+    display:flex;
+    flex-direction:column;
+    min-height:100vh;
+  }
+  /* Loading */
+  #loading{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.65);z-index:9999}
+  #loading .box{background:#07121a;padding:22px;border-radius:12px;text-align:center}
+  /* Header */
+  header{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:transparent}
+  header h1{margin:0;font-size:18px;letter-spacing:1px}
+  header .userbar{display:flex;gap:8px;align-items:center}
+  /* Main layout */
+  .container{padding:10px;display:flex;flex-direction:column;gap:10px;flex:1;}
+  /* Top bar: withdraw / small counter / balance */
+  .topbar{display:flex;gap:8px;align-items:center;justify-content:space-between}
+  .topbar .left{display:flex;gap:8px;align-items:center}
+  .btn-withdraw{background:var(--yellow);color:#000;padding:8px 12px;border-radius:10px;font-weight:700}
+  .small-counter{width:44px;height:44px;border-radius:50%;background:#000;display:flex;align-items:center;justify-content:center;flex-direction:column;border:2px solid #111}
+  .small-counter .num{color:var(--blue);font-weight:700}
+  .bal{background:var(--green);padding:8px 12px;border-radius:10px;color:#022; font-weight:700}
+  /* Aviator box */
+  .aviator{
+    background:linear-gradient(180deg,#090909,#0f0f0f);
+    border-radius:14px;
+    padding:8px;
+    position:relative;
+    overflow:hidden;
+  }
+  .plane-box{
+    background:linear-gradient(180deg,#050505,#0b0b0b);
+    border-radius:12px;
+    height:46vh;
+    min-height:320px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    position:relative;
+  }
+  /* Removed: canvas#planeCanvas style */
+  .live-mult{position:absolute;left:50%;transform:translateX(-50%);top:18%;background:transparent;padding:6px 10px;border-radius:8px;font-weight:800;font-size:20px}
+  .flight-msg{position:absolute;left:12px;top:12px;background:transparent;color:var(--muted);font-size:12px}
+  /* bottom controls */
+  .controls{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;padding-top:8px}
+  .big-left{display:flex;flex-direction:column;gap:8px;flex:1;min-width:170px}
+  .big-right{display:flex;flex-direction:column;gap:8px;width:220px;max-width:40%}
+  .stake-box, .bet-box{background:#07121a;padding:10px;border-radius:10px}
+  .stake-box input{width:100%;padding:8px;border-radius:8px;border:1px solid #222;background:transparent;color:var(--white);font-size:16px}
+  .bet-button{padding:12px;border-radius:10px;text-align:center;font-weight:800;cursor:pointer}
+  .bet-button.bet{background:var(--green);color:#022}
+  .bet-button.yellow{background:var(--yellow);color:#000}
+  .bet-button.cancel{background:var(--red);color:#fff}
+  .deposit-btn{background:#0a5;padding:8px 10px;border-radius:8px;color:#022;font-weight:700}
+  .past-list{display:flex;gap:6px;align-items:center;overflow:auto;padding-top:6px}
+  .past-item{background:#111;border-radius:8px;padding:6px 8px;font-weight:700;font-size:13px}
+  .footer-note{font-size:12px;color:var(--muted);text-align:center;padding:10px}
+  /* Login/Register modal */
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:1000}
+  .card{background:#071421;padding:16px;border-radius:12px;color:var(--white);width:92%;max-width:420px}
+  .form-row{display:flex;flex-direction:column;margin-bottom:10px}
+  .form-row label{font-size:13px;color:var(--muted);margin-bottom:6px}
+  .form-row input{padding:10px;border-radius:8px;border:1px solid #222;background:transparent;color:var(--white)}
+  .row-h{display:flex;gap:8px}
+  .small{font-size:13px;color:var(--muted)}
+  .linkish{color:var(--blue);cursor:pointer;font-weight:700}
+  .top-controls{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+  /* responsive tweaks */
+  @media (max-width:640px){
+    .big-right{width:48%}
+    /* Removed: .plane-box height tweak */
+  }
 </style>
 </head>
 <body>
-<div id="loading">Loading...</div>
-<div id="app">
-  <div class="header">
-    <div style="display:flex;justify-content:space-between;align-items:center;">
-      <div>Balance: <span id="balanceBox">1000</span></div>
-      <div>
-        <span id="sessionName" style="display:none">Hi, <span id="userNameTxt"></span></span>
-        <button id="loginBtn" class="deposit-btn">Login</button>
-        <button id="logoutBtn" class="deposit-btn" style="display:none">Logout</button>
-      </div>
-    </div>
-    <div style="font-size:13px;color:var(--muted)">Past 10 multipliers</div>
-    <div style="font-size:13px;color:var(--muted)">Round time: <span id="roundTimer">--</span></div>
-    <div class="past-list" id="pastList" style="margin-top:6px"></div>
-  </div>
+<div id="loading"><div class="box"><strong>Loading Aviator...</strong><div style="height:10px"></div><small style="color:#9fb">Initializing</small></div></div>
 
-  <section class="controls">
-    <div class="big-left">
-      <div class="stake-box">
-        <div style="font-size:13px;color:var(--muted)">Stake</div>
-        <input id="stakeInput" type="number" placeholder="Enter stake amount" min="1" />
-        <div style="display:flex;gap:8px;margin-top:8px">
-          <button id="maxBtn" class="deposit-btn">Max</button>
-          <button id="plus10" class="deposit-btn">+10</button>
-          <button id="plus50" class="deposit-btn">+50</button>
+<div class="app" id="app" style="display:none">
+  <header>
+    <h1>Aviator</h1>
+    <div class="userbar">
+      <div id="sessionName" style="display:none">Welcome <span id="userNameTxt"></span></div>
+      <button id="loginBtn" class="linkish">Login / Register</button>
+      <button id="logoutBtn" style="display:none" class="linkish">Logout</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="topbar">
+      <div class="left">
+        <button class="btn-withdraw" id="withdrawBtn">Withdraw</button>
+        <div class="small-counter">
+          <div style="font-size:11px;color:var(--muted)">#</div>
+          <div class="num" id="genIndex">0</div>
         </div>
       </div>
-      <div style="display:flex;gap:8px;align-items:center;">
-        <div class="bet-box" style="flex:1">
-          <div style="font-size:12px;color:var(--muted)">Bet</div>
-          <div id="betAmount" style="font-weight:800;font-size:18px">0</div>
+      <div class="bal" id="balanceBox">1000</div>
+    </div>
+
+    <section class="aviator">
+      <div class="flight-msg" id="roundStateMsg">Waiting...</div>
+      <div class="plane-box">
+        <div class="live-mult" id="liveMultiplier">×1.00</div>
+      </div>
+
+      <div style="padding:8px 2px;">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div style="font-size:13px;color:var(--muted)">Past 10 multipliers</div>
+          </div>
+        <div class="past-list" id="pastList" style="margin-top:6px"></div>
+      </div>
+    </section>
+
+    <section class="controls">
+      <div class="big-left">
+        <div class="stake-box">
+          <div style="font-size:13px;color:var(--muted)">Stake</div>
+          <input id="stakeInput" type="number" placeholder="Enter stake amount" min="1" />
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button id="maxBtn" class="deposit-btn">Max</button>
+            <button id="plus10" class="deposit-btn">+10</button>
+            <button id="plus50" class="deposit-btn">+50</button>
+          </div>
         </div>
-        <div id="betButton" class="bet-button bet" style="width:150px;display:flex;align-items:center;justify-content:center">Bet</div>
-      </div>
-    </div>
 
-    <div class="big-right">
-      <div style="display:flex;gap:8px;align-items:center;justify-content:space-between">
-        <div style="font-size:13px;color:var(--muted)">Deposit</div>
-        <div class="deposit-btn" id="depositBtn">Deposit</div>
-      </div>
-      <div style="margin-top:8px">
-        <div style="font-size:13px;color:var(--muted)">Status</div>
-        <div id="statusBox" style="background:#07121a;padding:8px;border-radius:8px;margin-top:6px">Idle</div>
-      </div>
-    </div>
-  </section>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <div class="bet-box" style="flex:1">
+            <div style="font-size:12px;color:var(--muted)">Bet</div>
+            <div id="betAmount" style="font-weight:800;font-size:18px">0</div>
+          </div>
 
-  <div id="roundStateMsg" style="margin-bottom:6px;font-size:14px"></div>
+          <div id="betButton" class="bet-button bet" style="width:150px;display:flex;align-items:center;justify-content:center">Bet</div>
+        </div>
+      </div>
 
-  <div class="footer-note">We keep your data secure and confidential. (Win_Big)</div>
+      <div class="big-right">
+        <div style="display:flex;gap:8px;align-items:center;justify-content:space-between">
+          <div style="font-size:13px;color:var(--muted)">Deposit</div>
+          <div class="deposit-btn" id="depositBtn">Deposit</div>
+        </div>
+        <div style="margin-top:8px">
+          <div style="font-size:13px;color:var(--muted)">Status</div>
+          <div id="statusBox" style="background:#07121a;padding:8px;border-radius:8px;margin-top:6px">Idle</div>
+        </div>
+      </div>
+    </section>
+
+    <div class="footer-note">We keep your data secure and confidential. (Win_Big)</div>
+  </main>
 </div>
 
-<!-- Login / register overlay -->
 <div id="authOverlay" class="overlay" style="display:none">
   <div class="card">
     <div class="top-controls">
@@ -141,12 +220,23 @@
 </div>
 
 <script>
+/*
+  Aviator single-file implementation
+  - Uses fixed 10s cycle: 5s pre-round (betting), 5s flight
+  - Generated multipliers array (1..250) embedded (from user)
+  - Accounts stored in localStorage under key 'avi_accounts'
+  - Session stored in localStorage under 'avi_session' (phone)
+  - Past-10 multipliers saved in localStorage 'avi_past'
+*/
+
 (() => {
-  const PRE_ROUND = 5_000;  
-  const FLIGHT = 5_000;     
-  const CYCLE = PRE_ROUND + FLIGHT; 
+  // ********** CONFIG **********
+  const PRE_ROUND = 5_000;   // ms (betting countdown)
+  const FLIGHT = 5_000;      // ms (flight duration)
+  const CYCLE = PRE_ROUND + FLIGHT; // 10s
   const DEFAULT_BALANCE = 1000;
-  const MULTIPLIERS = [1.27,2.14,1.03,3.82,7.41,1.56,1.11,4.27,12.49,1.24,2.71,1.09,8.35,1.63,1.02,5.42,2.03,1.18,3.54,10.83,
+  const MULTIPLIERS = [
+    1.27,2.14,1.03,3.82,7.41,1.56,1.11,4.27,12.49,1.24,2.71,1.09,8.35,1.63,1.02,5.42,2.03,1.18,3.54,10.83,
     1.15,1.07,6.48,2.32,1.95,1.04,1.34,9.64,1.13,3.09,1.26,4.91,2.67,1.08,1.52,1.21,14.72,1.03,2.18,1.09,
     1.88,3.47,1.06,7.22,1.24,1.11,2.97,5.84,1.04,18.93,1.27,1.18,4.48,1.06,2.54,1.77,8.92,1.39,1.08,3.63,
     1.14,1.04,22.41,1.57,2.01,1.07,4.12,6.83,1.09,1.28,3.96,2.38,1.05,1.16,15.74,1.23,1.02,9.83,2.91,1.31,
@@ -158,8 +248,11 @@
     1.08,1.17,12.47,1.03,3.72,1.26,2.05,1.04,1.14,25.93,1.36,1.07,4.53,3.64,1.05,1.12,6.21,1.09,1.04,8.71,
     1.26,1.05,5.32,2.47,1.07,1.11,14.31,1.03,1.07,10.57,1.19,1.14,4.91,3.53,1.04,1.26,9.07,1.03,1.18,13.24,
     1.39,1.06,4.62,2.83,1.07,1.03,6.97,1.92,1.05,1.21,18.61,1.06,3.22,1.15,2.41,1.05,1.08,11.39,1.12,1.03,
-    8.51,1.28,1.04,4.17,3.11,1.06,1.18,7.73,1.04,1.29];
-  const TOTAL = MULTIPLIERS.length;
+    8.51,1.28,1.04,4.17,3.11,1.06,1.18,7.73,1.04,1.29
+  ];
+  const TOTAL = MULTIPLIERS.length; // 250
+
+  // ********** STORAGE HELPERS **********
   const key_accounts = 'avi_accounts';
   const key_session = 'avi_session';
   const key_past = 'avi_past';
@@ -172,6 +265,7 @@
   function loadPast(){ try { return JSON.parse(localStorage.getItem(key_past) || '[]') } catch(e){return []}}
   function savePast(arr){ localStorage.setItem(key_past, JSON.stringify(arr.slice(0,100))) }
 
+  // ********** DOM **********
   const app = document.getElementById('app');
   const loading = document.getElementById('loading');
   const loginBtn = document.getElementById('loginBtn');
@@ -194,7 +288,7 @@
   const statusBox = document.getElementById('statusBox');
   const genIndex = document.getElementById('genIndex');
   const liveMultiplierEl = document.getElementById('liveMultiplier');
-  const roundTimer = document.getElementById('roundTimer');
+  // Removed: const roundTimer = document.getElementById('roundTimer');
   const pastList = document.getElementById('pastList');
   const withdrawBtn = document.getElementById('withdrawBtn');
   const depositBtn = document.getElementById('depositBtn');
@@ -202,15 +296,33 @@
   const plus10 = document.getElementById('plus10');
   const plus50 = document.getElementById('plus50');
   const roundStateMsg = document.getElementById('roundStateMsg');
+  // Removed: const planeCanvas = document.getElementById('planeCanvas');
 
+  // auth fields
+  const loginPhone = document.getElementById('loginPhone');
+  const loginPass = document.getElementById('loginPass');
+  const regName = document.getElementById('regName');
+  const regPhone = document.getElementById('regPhone');
+  const regPass = document.getElementById('regPass');
+  const regPass2 = document.getElementById('regPass2');
+  const showRegisterLink = showRegister;
+  const showLoginLink = showLogin;
+
+  // ********** APP STATE **********
   let accounts = loadAccounts();
-  let past = loadPast();
-  let currentUser = getSession();
+  let past = loadPast(); // last multipliers
+  let currentUser = getSession(); // phone or null
   let userObj = currentUser ? accounts[currentUser] : null;
 
+  // bets:
+  // queuedBet: user has pressed Bet while NOT in-flight (i.e., during PRE_ROUND or during flight to join next), and can cancel before flight start
+  // activeBet: {amount, roundIndex} when the flight starts, stake is deducted and becomes active; cashout allowed during flight
   let queuedBet = null;
   let activeBet = null;
 
+  // Removed: canvas init and resizeCanvas function
+
+  // ********** UTIL **********
   function now(){ return Date.now() }
   function formatNumber(n){ return Number(n).toFixed(2) }
   function safeNum(v){ return Math.max(0, Number(v) || 0) }
@@ -224,9 +336,23 @@
     return accounts[phone];
   }
 
+  // ********** ROUND / MULTIPLIER SCHEDULE **********
+  // We use fixed length cycles of CYCLE ms. Round index = floor(now / CYCLE) % TOTAL
+  // Pre-round: [0, PRE_ROUND) => betting allowed, queued bets possible
+  // Flight: [PRE_ROUND, CYCLE) => live multiplier increases from 1 to generatedMultiplier
+
   function getRoundIndexForTime(t){
     const idx = Math.floor(t / CYCLE) % TOTAL;
     return idx;
+  }
+  function getRoundStartTimeForIndex(i){
+    // find the first time (>=0 epoch) where floor(t/CYCLE) % TOTAL == i
+    // easiest: compute cycles since epoch and adjust
+    const cyclesSinceEpoch = Math.floor(Date.now() / CYCLE);
+    // compute currentIndex and difference
+    const currentIndex = cyclesSinceEpoch % TOTAL;
+    const diff = (i - currentIndex + TOTAL) % TOTAL;
+    return (cyclesSinceEpoch + diff) * CYCLE;
   }
 
   function getCurrentRoundInfo(){
@@ -237,7 +363,7 @@
     const elapsed = t - cycleStart;
     const phase = (elapsed < PRE_ROUND) ? 'pre' : 'flight';
     const phaseElapsed = (phase === 'pre') ? elapsed : (elapsed - PRE_ROUND);
-    const phaseRemaining = (phase === 'pre') ? (PRE_ROUND - elapsed) : 0; // flight countdown hidden
+    const phaseRemaining = (phase === 'pre') ? (PRE_ROUND - elapsed) : (CYCLE - elapsed);
     const generated = MULTIPLIERS[roundIndex];
     return {
       roundIndex,
@@ -250,6 +376,15 @@
     };
   }
 
+  // live multiplier value during flight: linear from 1 -> generated over FLIGHT ms
+  function getLiveMultiplier(phase, phaseElapsed, generated){
+    if(phase !== 'flight') return 1.00;
+    const t = Math.max(0, Math.min(phaseElapsed, FLIGHT));
+    const ratio = t / FLIGHT;
+    return 1 + (generated - 1) * ratio;
+  }
+
+  // ********** PAST LIST **********
   function pushPast(mult){
     past.unshift(Number(mult));
     if(past.length>50) past.length=50;
@@ -267,6 +402,7 @@
     }
   }
 
+  // ********** UI / SESSION **********
   function refreshSession(){
     currentUser = getSession();
     userObj = currentUser ? (accounts[currentUser]) : null;
@@ -284,7 +420,271 @@
     }
   }
 
+  // ********** AUTH HANDLERS **********
   loginBtn.addEventListener('click', ()=>{ openAuth('login') });
   closeAuth.addEventListener('click', ()=>{ closeAuthOverlay() });
   logoutBtn.addEventListener('click', ()=>{
     clearSession();
+    queuedBet = null; activeBet = null;
+    statusBox.textContent = 'Logged out';
+    refreshSession();
+  });
+
+  showRegisterLink.addEventListener('click', ()=>{ openAuth('register') });
+  showLoginLink.addEventListener('click', ()=>{ openAuth('login') });
+
+  function openAuth(mode='login'){
+    authOverlay.style.display='flex';
+    if(mode==='login'){
+      authTitle.textContent='Login';
+      loginForm.style.display='block';
+      registerForm.style.display='none';
+    } else {
+      authTitle.textContent='Create account';
+      loginForm.style.display='none';
+      registerForm.style.display='block';
+    }
+  }
+  function closeAuthOverlay(){
+    authOverlay.style.display='none';
+  }
+
+  doRegister.addEventListener('click', ()=>{
+    const name = regName.value.trim() || regPhone.value.trim();
+    const phone = regPhone.value.trim();
+    const p1 = regPass.value;
+    const p2 = regPass2.value;
+    if(!phone){ alert('Enter phone'); return; }
+    if(!p1 || p1.length < 3){ alert('Password too short'); return; }
+    if(p1 !== p2){ alert('Passwords do not match'); return; }
+    accounts = loadAccounts();
+    if(accounts[phone]){ alert('Account exists with this phone'); return; }
+    accounts[phone] = { name, phone, pass: p1, balance: DEFAULT_BALANCE };
+    saveAccounts(accounts);
+    setSession(phone);
+    closeAuthOverlay();
+    refreshSession();
+  });
+
+  doLogin.addEventListener('click', ()=>{
+    const phone = loginPhone.value.trim();
+    const pass = loginPass.value;
+    if(!phone || !pass){ alert('Enter phone and password'); return; }
+    accounts = loadAccounts();
+    const acc = accounts[phone];
+    if(!acc){ alert('No account found'); return; }
+    if(acc.pass !== pass){ alert('Password incorrect'); return; }
+    setSession(phone);
+    closeAuthOverlay();
+    refreshSession();
+  });
+
+  // ********** BET / STAKE / BALANCE LOGIC **********
+  function updateBetUI(){
+    betAmount.textContent = (queuedBet ? queuedBet.amount : (activeBet? activeBet.amount : 0));
+    // adjust button state
+    if(activeBet){
+      betButton.className = 'bet-button yellow';
+      betButton.textContent = 'Cash out';
+    } else if(queuedBet){
+      betButton.className = 'bet-button cancel';
+      betButton.textContent = 'Cancel';
+    } else {
+      betButton.className = 'bet-button bet';
+      betButton.textContent = 'Bet';
+    }
+  }
+
+  betButton.addEventListener('click', ()=>{
+    if(!currentUser){ openAuth('login'); return; }
+    const stake = safeNum(stakeInput.value);
+    if(betButton.classList.contains('bet')){
+      // Pressed Bet — this should queue the bet for next round or join next round depending on timing
+      if(stake <= 0){ alert('Enter stake amount'); return; }
+      if(stake > userObj.balance){ alert('Stake must be <= balance'); return; }
+      queuedBet = { amount: stake };
+      statusBox.textContent = 'Queued for next round. You may cancel before flight starts.';
+      updateBetUI();
+    } else if(betButton.classList.contains('cancel')){
+      // cancel queued bet
+      queuedBet = null;
+      statusBox.textContent = 'Bet cancelled';
+      updateBetUI();
+    } else if(betButton.classList.contains('yellow')){
+      // Cash out active bet
+      if(!activeBet){ return; }
+      // compute current live multiplier
+      const ri = activeBet.roundIndex;
+      const generated = MULTIPLIERS[ri];
+      const info = getCurrentRoundInfo();
+      const live = getLiveMultiplier(info.phase, info.phaseElapsed, generated);
+      const win = activeBet.amount * live;
+      accounts = loadAccounts();
+      accounts[currentUser].balance = Number(accounts[currentUser].balance) + win;
+      saveAccounts(accounts);
+      userObj = accounts[currentUser];
+      activeBet = null;
+      statusBox.textContent = 'Cashed out: ×' + formatNumber(live) + ' → +' + formatNumber(win);
+      balanceBox.textContent = String(Math.round(userObj.balance*100)/100);
+      updateBetUI();
+    }
+  });
+
+  // utility to deduct stake from user at flight start
+  function deductForActive(amt){
+    accounts = loadAccounts();
+    accounts[currentUser].balance = Number(accounts[currentUser].balance) - amt;
+    saveAccounts(accounts);
+    userObj = accounts[currentUser];
+    balanceBox.textContent = String(Math.round(userObj.balance*100)/100);
+  }
+
+  // if activeBet loses (burst), nothing to add (stake was already deducted)
+  // ********** Main loop controlling rounds **********
+  let lastRoundIndex = null;
+  function mainTick(){
+    const info = getCurrentRoundInfo();
+    const idx = info.roundIndex;
+    genIndex.textContent = idx + 1; // human 1..250
+
+    // update past list rendering
+    renderPast();
+
+    // update phase text / timer
+    if(info.phase === 'pre'){
+      roundStateMsg.textContent = 'Betting — place stake';
+      // Removed: roundTimer.textContent update
+      liveMultiplierEl.textContent = '×1.00';
+      // if there is a queued bet and the current cycle transitions into flight, we will handle
+    } else {
+      roundStateMsg.textContent = 'Flight — live';
+      // Removed: roundTimer.textContent update
+      const live = getLiveMultiplier(info.phase, info.phaseElapsed, info.generated);
+      liveMultiplierEl.textContent = '×' + formatNumber(live);
+    }
+
+    // phase transitions
+    if(lastRoundIndex === null) lastRoundIndex = idx;
+
+    // if a new round started (index changed), then handle end-of-previous-round logic
+    if(idx !== lastRoundIndex){
+      // previous round ended -> its generated multiplier is MULTIPLIERS[lastRoundIndex]
+      const prevGen = MULTIPLIERS[lastRoundIndex];
+      pushPast(prevGen);
+      // If there was an activeBet for prev round that wasn't cashed out, it's already deducted and lost (we do nothing)
+      activeBet = null;
+      // queued bets remain queued for next rounds (they will become active at flight start)
+    }
+
+    // If this is a new round and we are in PRE_ROUND now, nothing else
+    // Now: if we are just going from PRE_ROUND to FLIGHT and there is queuedBet, make it active and deduct
+    // We can detect the exact moment when phaseElapsed crosses PRE_ROUND
+    // We'll detect when phase is 'flight' and we have queuedBet -> make active if not already active
+    if(info.phase === 'flight'){
+      if(queuedBet && !activeBet){
+        // make it active for this round
+        activeBet = { amount: queuedBet.amount, roundIndex: idx };
+        queuedBet = null;
+        // deduct immediately
+        if(currentUser){
+          deductForActive(activeBet.amount);
+          statusBox.textContent = 'Bet active — good luck';
+        } else {
+          // if no user session, cancel
+          activeBet = null;
+          statusBox.textContent = 'No session — bet cancelled';
+        }
+      }
+    }
+
+    // if flight is active for this round and activeBet exists and was not cashed yet, cashout possible.
+    // If flight ended this tick (i.e., near end), then settle losing bets: handled when nextIndex != lastRoundIndex earlier
+
+    // Update bet UI
+    updateBetUI();
+
+    // update lastRoundIndex
+    lastRoundIndex = idx;
+  }
+
+  // run mainTick every 120ms for responsiveness
+  setInterval(mainTick, 120);
+
+  // ********** Canvas: plane animation **********
+  // Removed: drawPlane function
+  // Removed: animLoop function
+  // Removed: window.requestAnimationFrame(()=>{ resizeCanvas(); animLoop(); });
+
+  // ********** periodic housekeeping: when flight ends, settle round and push past **********
+  // We use mainTick and the past push logic already handles this.
+
+  // ********** UI actions **********
+  withdrawBtn.addEventListener('click', ()=>{ alert('Withdrawal clicked (dummy). GitHub will log the click.'); });
+  depositBtn.addEventListener('click', ()=>{
+    if(!currentUser){ openAuth('login'); return; }
+    const amt = Number(prompt('Enter amount to deposit (demo):', '100')) || 0;
+    if(amt<=0) return;
+    accounts = loadAccounts();
+    accounts[currentUser].balance = Number(accounts[currentUser].balance) + amt;
+    saveAccounts(accounts);
+    userObj = accounts[currentUser];
+    balanceBox.textContent = String(Math.round(userObj.balance*100)/100);
+    statusBox.textContent = 'Deposited ' + amt;
+  });
+
+  maxBtn.addEventListener('click', ()=>{
+    if(!currentUser){ openAuth('login'); return; }
+    accounts = loadAccounts();
+    const bal = accounts[currentUser].balance || DEFAULT_BALANCE;
+    stakeInput.value = bal;
+  });
+  plus10.addEventListener('click', ()=>{ stakeInput.value = safeNum(stakeInput.value) + 10; });
+  plus50.addEventListener('click', ()=>{ stakeInput.value = safeNum(stakeInput.value) + 50; });
+
+  // update displayed bet amount when stake changes
+  stakeInput.addEventListener('input', ()=>{ betAmount.textContent = queuedBet ? queuedBet.amount : (activeBet? activeBet.amount : safeNum(stakeInput.value)); });
+
+  // ********** initialization **********
+  function init(){
+    accounts = loadAccounts();
+    past = loadPast();
+    refreshSession();
+    renderPast();
+    loading.style.display='none';
+    app.style.display='flex';
+    // set initial UI
+    updateBetUI();
+  }
+  init();
+
+  // onbeforeunload -> require login again if they close tab? User wants to re-login when visiting other apps.
+  // We'll preserve session but require login if they explicitly log out. The user asked: "Ask to log in again if someone Log out Visit other apps Visit other links" — we can't detect app switching; but leaving page and returning keeps session. If they want always re-login we could clear session on visibilitychange hidden; but that would be annoying. We'll clear session on pagehide to match their note that visiting other apps should ask login.
+  window.addEventListener('pagehide', ()=>{ /* intentionally do nothing to preserve session */ });
+  // To mimic "ask to log in again if visit other apps" we clear session on visibilitychange when hidden (user leaves tab/app)
+  document.addEventListener('visibilitychange', ()=>{
+    if(document.hidden){
+      // clear session to force login on return
+      // NOTE: this mirrors user's requirement to re-login when visiting other apps/links
+      // BUT if you prefer persistent session, comment next line out.
+      clearSession();
+      refreshSession();
+      statusBox.textContent = 'Session cleared while away; please login again.';
+    }
+  });
+
+  // persist past 10 on start (if empty fill with first few)
+  if(!past || past.length===0){
+    // fill with first 6 multipliers for display
+    for(let i=0;i<6;i++) pushPast(MULTIPLIERS[(TOTAL - 1 - i + TOTAL) % TOTAL]);
+  }
+
+  // quick safety: keep UI updated if account changes
+  window.setInterval(()=>{ accounts = loadAccounts(); if(currentUser) { userObj = accounts[currentUser]; if(userObj) balanceBox.textContent = String(Math.round(userObj.balance*100)/100); } }, 2000);
+
+  // expose small debug on console
+  console.log('Aviator demo initialized. Rounds every ' + (CYCLE/1000) + 's. Total multipliers:', TOTAL);
+
+})();
+</script>
+</body>
+</html>
