@@ -1,227 +1,3 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Aviator</title>
-<style>
-  :root{
-    --bg:#0b0b0b;
-    --panel:#111;
-    --accent:#00b04f;
-    --muted:#888;
-    --yellow:#f0c000;
-    --red:#d9534f;
-    --blue:#2a9df4;
-    --green:#2ecc71;
-    --white:#fff;
-    --card-radius:12px;
-  }
-  html,body{height:100%;margin:0;font-family:Inter,system-ui,Arial;background:var(--bg);color:var(--white)}
-  .app{
-    display:flex;
-    flex-direction:column;
-    min-height:100vh;
-  }
-  /* Loading */
-  #loading{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.65);z-index:9999}
-  #loading .box{background:#07121a;padding:22px;border-radius:12px;text-align:center}
-  /* Header */
-  header{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:transparent}
-  header h1{margin:0;font-size:18px;letter-spacing:1px}
-  header .userbar{display:flex;gap:8px;align-items:center}
-  /* Main layout */
-  .container{padding:10px;display:flex;flex-direction:column;gap:10px;flex:1;}
-  /* Top bar: withdraw / small counter / balance */
-  .topbar{display:flex;gap:8px;align-items:center;justify-content:space-between}
-  .topbar .left{display:flex;gap:8px;align-items:center}
-  .btn-withdraw{background:var(--yellow);color:#000;padding:8px 12px;border-radius:10px;font-weight:700}
-  .small-counter{width:44px;height:44px;border-radius:50%;background:#000;display:flex;align-items:center;justify-content:center;flex-direction:column;border:2px solid #111}
-  .small-counter .num{color:var(--blue);font-weight:700}
-  .bal{background:var(--green);padding:8px 12px;border-radius:10px;color:#022; font-weight:700}
-  /* Aviator box */
-  .aviator{
-    background:linear-gradient(180deg,#090909,#0f0f0f);
-    border-radius:14px;
-    padding:8px;
-    position:relative;
-    overflow:hidden;
-  }
-  .plane-box{
-    background:linear-gradient(180deg,#050505,#0b0b0b);
-    border-radius:12px;
-    height:46vh;
-    min-height:320px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    position:relative;
-  }
-  /* REMOVED PLANE ANIMATION: Hiding canvas completely */
-  canvas#planeCanvas{width:100%;height:100%;display:none;border-radius:10px}
-  .live-mult{position:absolute;left:50%;transform:translateX(-50%);top:18%;background:transparent;padding:6px 10px;border-radius:8px;font-weight:800;font-size:20px}
-  .flight-msg{position:absolute;left:12px;top:12px;background:transparent;color:var(--muted);font-size:12px}
-  /* bottom controls */
-  .controls{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;padding-top:8px}
-  .big-left{display:flex;flex-direction:column;gap:8px;flex:1;min-width:170px}
-  .big-right{display:flex;flex-direction:column;gap:8px;width:220px;max-width:40%}
-  .stake-box, .bet-box{background:#07121a;padding:10px;border-radius:10px}
-  .stake-box input{width:100%;padding:8px;border-radius:8px;border:1px solid #222;background:transparent;color:var(--white);font-size:16px}
-  .bet-button{padding:12px;border-radius:10px;text-align:center;font-weight:800;cursor:pointer}
-  .bet-button.bet{background:var(--green);color:#022}
-  .bet-button.yellow{background:var(--yellow);color:#000}
-  .bet-button.cancel{background:var(--red);color:#fff}
-  .deposit-btn{background:#0a5;padding:8px 10px;border-radius:8px;color:#022;font-weight:700}
-  .past-list{display:flex;gap:6px;align-items:center;overflow:auto;padding-top:6px}
-  .past-item{background:#111;border-radius:8px;padding:6px 8px;font-weight:700;font-size:13px}
-  .footer-note{font-size:12px;color:var(--muted);text-align:center;padding:10px}
-  /* Login/Register modal */
-  .overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:1000}
-  .card{background:#071421;padding:16px;border-radius:12px;color:var(--white);width:92%;max-width:420px}
-  .form-row{display:flex;flex-direction:column;margin-bottom:10px}
-  .form-row label{font-size:13px;color:var(--muted);margin-bottom:6px}
-  .form-row input{padding:10px;border-radius:8px;border:1px solid #222;background:transparent;color:var(--white)}
-  .row-h{display:flex;gap:8px}
-  .small{font-size:13px;color:var(--muted)}
-  .linkish{color:var(--blue);cursor:pointer;font-weight:700}
-  .top-controls{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
-  /* responsive tweaks */
-  @media (max-width:640px){
-    .big-right{width:48%}
-    .plane-box{height:50vh}
-  }
-</style>
-</head>
-<body>
-<div id="loading"><div class="box"><strong>Loading Aviator...</strong><div style="height:10px"></div><small style="color:#9fb">Initializing</small></div></div>
-
-<div class="app" id="app" style="display:none">
-  <header>
-    <h1>Aviator</h1>
-    <div class="userbar">
-      <div id="sessionName" style="display:none">Welcome <span id="userNameTxt"></span></div>
-      <button id="loginBtn" class="linkish">Login / Register</button>
-      <button id="logoutBtn" style="display:none" class="linkish">Logout</button>
-    </div>
-  </header>
-
-  <main class="container">
-    <div class="topbar">
-      <div class="left">
-        <button class="btn-withdraw" id="withdrawBtn">Withdraw</button>
-        <div class="small-counter">
-          <div style="font-size:11px;color:var(--muted)">#</div>
-          <div class="num" id="genIndex">0</div>
-        </div>
-      </div>
-      <div class="bal" id="balanceBox">1000</div>
-    </div>
-
-    <section class="aviator">
-      <div class="flight-msg" id="roundStateMsg">Waiting...</div>
-      <div class="plane-box">
-        <canvas id="planeCanvas"></canvas>
-        <div class="live-mult" id="liveMultiplier">×1.00</div>
-      </div>
-
-      <div style="padding:8px 2px;">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <div style="font-size:13px;color:var(--muted)">Past 10 multipliers</div>
-          <div id="countdownBox" style="font-size:13px;color:var(--muted)">Round time: <span id="roundTimer">--</span></div>
-        </div>
-        <div class="past-list" id="pastList" style="margin-top:6px"></div>
-      </div>
-    </section>
-
-    <section class="controls">
-      <div class="big-left">
-        <div class="stake-box">
-          <div style="font-size:13px;color:var(--muted)">Stake</div>
-          <input id="stakeInput" type="number" placeholder="Enter stake amount" min="1" />
-          <div style="display:flex;gap:8px;margin-top:8px">
-            <button id="maxBtn" class="deposit-btn">Max</button>
-            <button id="plus10" class="deposit-btn">+10</button>
-            <button id="plus50" class="deposit-btn">+50</button>
-          </div>
-        </div>
-
-        <div style="display:flex;gap:8px;align-items:center;">
-          <div class="bet-box" style="flex:1">
-            <div style="font-size:12px;color:var(--muted)">Bet</div>
-            <div id="betAmount" style="font-weight:800;font-size:18px">0</div>
-          </div>
-
-          <div id="betButton" class="bet-button bet" style="width:150px;display:flex;align-items:center;justify-content:center">Bet</div>
-        </div>
-      </div>
-
-      <div class="big-right">
-        <div style="display:flex;gap:8px;align-items:center;justify-content:space-between">
-          <div style="font-size:13px;color:var(--muted)">Deposit</div>
-          <div class="deposit-btn" id="depositBtn">Deposit</div>
-        </div>
-        <div style="margin-top:8px">
-          <div style="font-size:13px;color:var(--muted)">Status</div>
-          <div id="statusBox" style="background:#07121a;padding:8px;border-radius:8px;margin-top:6px">Idle</div>
-        </div>
-      </div>
-    </section>
-
-    <div class="footer-note">We keep your data secure and confidential. (Win_Big)</div>
-  </main>
-</div>
-
-<div id="authOverlay" class="overlay" style="display:none">
-  <div class="card">
-    <div class="top-controls">
-      <strong id="authTitle">Login</strong>
-      <div><button id="closeAuth" class="linkish">Close</button></div>
-    </div>
-
-    <div id="loginForm">
-      <div class="form-row">
-        <label>Phone number</label>
-        <input id="loginPhone" placeholder="07XXXXXXXX" />
-      </div>
-      <div class="form-row">
-        <label>Password</label>
-        <input id="loginPass" type="password" />
-      </div>
-      <div style="display:flex;gap:8px;justify-content:space-between">
-        <div class="small linkish" id="showRegister">Create account</div>
-        <button id="doLogin" class="deposit-btn">Login</button>
-      </div>
-      <div style="margin-top:8px;color:var(--muted);font-size:13px">Save password to browser is optional (use browser prompt).</div>
-    </div>
-
-    <div id="registerForm" style="display:none">
-      <div class="form-row">
-        <label>Full name</label>
-        <input id="regName" placeholder="Your name" />
-      </div>
-      <div class="form-row">
-        <label>Phone number</label>
-        <input id="regPhone" placeholder="07XXXXXXXX" />
-      </div>
-      <div class="row-h">
-        <div style="flex:1" class="form-row">
-          <label>Password</label>
-          <input id="regPass" type="password" />
-        </div>
-        <div style="flex:1" class="form-row">
-          <label>Confirm</label>
-          <input id="regPass2" type="password" />
-        </div>
-      </div>
-      <div style="display:flex;gap:8px;justify-content:space-between">
-        <div class="small linkish" id="showLogin">Already have account?</div>
-        <button id="doRegister" class="deposit-btn">Create</button>
-      </div>
-      <div style="margin-top:8px;color:var(--muted);font-size:13px">New accounts start with 1000 balance.</div>
-    </div>
-  </div>
-</div>
-
 <script>
 /*
   Aviator single-file implementation
@@ -325,6 +101,8 @@
   // activeBet: {amount, roundIndex} when the flight starts, stake is deducted and becomes active; cashout allowed during flight
   let queuedBet = null;
   let activeBet = null;
+  // State to track if the round was 'flight' in the previous tick
+  let wasFlightLastTick = false; 
 
   // canvas init
   // REMOVED PLANE ANIMATION: Remove ctx initialization
@@ -510,6 +288,7 @@
     queuedBet = null; activeBet = null;
     statusBox.textContent = 'Logged out';
     refreshSession();
+    updateBetUI(); // Ensure bet button reflects logout
   });
 
   showRegisterLink.addEventListener('click', ()=>{ openAuth('register') });
@@ -563,7 +342,7 @@
 
   // ********** BET / STAKE / BALANCE LOGIC **********
   function updateBetUI(){
-    betAmount.textContent = (queuedBet ? queuedBet.amount : (activeBet? activeBet.amount : 0));
+    betAmount.textContent = formatNumber(queuedBet ? queuedBet.amount : (activeBet? activeBet.amount : safeNum(stakeInput.value)));
     // adjust button state
     if(activeBet){
       betButton.className = 'bet-button yellow';
@@ -580,6 +359,7 @@
   betButton.addEventListener('click', ()=>{
     if(!currentUser){ openAuth('login'); return; }
     const stake = safeNum(stakeInput.value);
+    
     if(betButton.classList.contains('bet')){
       // Pressed Bet — this should queue the bet for next round or join next round depending on timing
       if(stake <= 0){ alert('Enter stake amount'); return; }
@@ -594,23 +374,41 @@
       updateBetUI();
     } else if(betButton.classList.contains('yellow')){
       // Cash out active bet
-      if(!activeBet){ return; }
-      // compute current live multiplier
-      const ri = activeBet.roundIndex;
-      const generated = MULTIPLIERS[ri];
+      if(!activeBet){ 
+        // Should not happen if UI is correct, but safe guard
+        statusBox.textContent = 'Error: No active bet to cash out.';
+        updateBetUI(); // Reset button
+        return; 
+      }
+      
       const info = getCurrentRoundInfo();
-      // Use the actual flight duration for cashout calculation boundary check
-      const live = getLiveMultiplier(info.phase, info.phaseElapsed, generated, info.FLIGHT_ACTUAL); 
+      // Check if cashout is too late (round has ended)
+      if(info.phase === 'ended'){
+         // This handles the user trying to cash out after the game has already burst 
+         // but before the mainTick has processed the 'ended' state.
+         // If it's already ended, the bet is lost.
+         const prevGen = MULTIPLIERS[activeBet.roundIndex];
+         const cashoutAmount = activeBet.amount;
+         activeBet = null; // Important: Clear the active bet
+         statusBox.textContent = 'Too late! The plane flew off at ×' + formatNumber(prevGen) + '. Bet lost: ' + formatNumber(cashoutAmount);
+         updateBetUI();
+         return;
+      }
+      
+      // compute current live multiplier
+      const live = getLiveMultiplier(info.phase, info.phaseElapsed, info.generated, info.FLIGHT_ACTUAL); 
       
       const win = activeBet.amount * live;
       accounts = loadAccounts();
       accounts[currentUser].balance = Number(accounts[currentUser].balance) + win;
       saveAccounts(accounts);
       userObj = accounts[currentUser];
-      activeBet = null;
+      
+      activeBet = null; // Important: Clear the active bet immediately on cashout
+      
       statusBox.textContent = 'Cashed out: ×' + formatNumber(live) + ' → +' + formatNumber(win);
       balanceBox.textContent = String(Math.round(userObj.balance*100)/100);
-      updateBetUI();
+      updateBetUI(); // Update UI to 'Bet' immediately
     }
   });
 
@@ -623,38 +421,55 @@
     balanceBox.textContent = String(Math.round(userObj.balance*100)/100);
   }
 
-  // if activeBet loses (burst), nothing to add (stake was already deducted)
-  // ********** Main loop controlling rounds **********
   let lastRoundIndex = null;
+  let wasFlightLastTick = false; // State variable to track phase change
+
+  // ********** Main loop controlling rounds **********
   function mainTick(){
     const info = getCurrentRoundInfo();
     const idx = info.roundIndex;
     genIndex.textContent = idx + 1; // human 1..250
 
+    // ************* CRITICAL FIX: Immediate Burst Detection *************
+    // This checks for the transition from 'flight' to 'ended' in the same round.
+    if(wasFlightLastTick && info.phase !== 'flight'){
+        if(activeBet){
+            // The round just burst (or ended), and the user didn't cash out. Bet is lost.
+            const burstMult = MULTIPLIERS[idx]; // Use the current round's multiplier
+            const lostAmount = activeBet.amount;
+            activeBet = null; // Clear active bet immediately
+            statusBox.textContent = 'Flew off at ×' + formatNumber(burstMult) + '. Bet lost: ' + formatNumber(lostAmount);
+            // This update is essential to change the Cash Out button to Bet immediately
+            updateBetUI(); 
+        }
+    }
+    wasFlightLastTick = (info.phase === 'flight');
+    // *******************************************************************
+    
     // update past list rendering
     renderPast();
 
-    // ************* FEATURE 1 & 2 IMPLEMENTATION *************
+
+    // ************* UI UPDATES *************
     if(info.phase === 'pre'){
-      // 2. Rename 5 second countdown to "Draw in (value countdown)"
       roundStateMsg.textContent = 'Betting — Draw in'; 
       roundTimer.textContent = Math.ceil(info.phaseRemaining/1000) + 's';
       liveMultiplierEl.textContent = '×1.00';
-      // Show countdown during pre-round
       countdownBox.style.display = 'block'; 
     } else { // info.phase === 'flight' or 'ended'
-      // 1. Hide round countdown during flight (everything including the name)
       countdownBox.style.display = 'none'; 
       
       if(info.phase === 'flight') {
         roundStateMsg.textContent = 'Flight — live';
-        // Display the actual flight time dynamically during flight (although hidden)
         roundTimer.textContent = (info.FLIGHT_ACTUAL / 1000).toFixed(2) + 's'; 
         const live = getLiveMultiplier(info.phase, info.phaseElapsed, info.generated, info.FLIGHT_ACTUAL);
         liveMultiplierEl.textContent = '×' + formatNumber(live);
       } else { // info.phase === 'ended'
         roundStateMsg.textContent = 'Waiting...';
-        liveMultiplierEl.textContent = '×1.00';
+        // Display the actual burst multiplier for the *previous* round until index changes
+        // For the *current* tick, use the burst point of the round that just ended.
+        // NOTE: Since the index hasn't changed yet, info.generated is the burst point.
+        liveMultiplierEl.textContent = '×' + formatNumber(info.generated); 
       }
     }
     // ********************************************************
@@ -668,12 +483,14 @@
       // previous round ended -> its generated multiplier is MULTIPLIERS[lastRoundIndex]
       const prevGen = MULTIPLIERS[lastRoundIndex];
       pushPast(prevGen);
-      // If there was an activeBet for prev round that wasn't cashed out, it's already deducted and lost (we do nothing)
-      activeBet = null;
+      
+      // Active bet was already cleared in the immediate burst detection above, 
+      // but in case of a very long wait phase, this clears it before the next round begins.
+      // activeBet = null; // Removed: Handled by immediate burst logic above
+
       // queued bets remain queued for next rounds (they will become active at flight start)
     }
 
-    // If this is a new round and we are in PRE_ROUND now, nothing else
     // Now: if we are just going from PRE_ROUND to FLIGHT and there is queuedBet, make it active and deduct
     // We'll detect when phase is 'flight' and we have queuedBet -> make active if not already active
     if(info.phase === 'flight'){
@@ -711,7 +528,7 @@
   depositBtn.addEventListener('click', ()=>{
     if(!currentUser){ openAuth('login'); return; }
     const amt = Number(prompt('Enter amount to deposit ():', '0')) || 0;
-    if(amt=0) return;
+    if(amt===0) return;
     accounts = loadAccounts();
     accounts[currentUser].balance = Number(accounts[currentUser].balance) + amt;
     saveAccounts(accounts);
@@ -730,7 +547,7 @@
   plus50.addEventListener('click', ()=>{ stakeInput.value = safeNum(stakeInput.value) + 50; });
 
   // update displayed bet amount when stake changes
-  stakeInput.addEventListener('input', ()=>{ betAmount.textContent = queuedBet ? queuedBet.amount : (activeBet? activeBet.amount : safeNum(stakeInput.value)); });
+  stakeInput.addEventListener('input', ()=>{ betAmount.textContent = queuedBet ? formatNumber(queuedBet.amount) : (activeBet? formatNumber(activeBet.amount) : formatNumber(safeNum(stakeInput.value))); });
 
   // ********** initialization **********
   function init(){
@@ -745,9 +562,6 @@
   }
   init();
 
-  // REMOVED PLANE ANIMATION: Remove animation start line
-  // window.requestAnimationFrame(()=>{ resizeCanvas(); animLoop(); });
-
   // onbeforeunload -> require login again if they close tab? User wants to re-login when visiting other apps.
   // We'll preserve session but require login if they explicitly log out. The user asked: "Ask to log in again if someone Log out Visit other apps Visit other links" — we can't detect app switching; but leaving page and returning keeps session. If they want always re-login we could clear session on visibilitychange hidden; but that would be annoying. We'll clear session on pagehide to match their note that visiting other apps should ask login.
   window.addEventListener('pagehide', ()=>{ /* intentionally do nothing to preserve session */ });
@@ -760,6 +574,7 @@
       clearSession();
       refreshSession();
       statusBox.textContent = 'Session cleared while away; please login again.';
+      updateBetUI(); // Ensure bet button reflects logout
     }
   });
 
@@ -778,4 +593,4 @@
 })();
 </script>
 </body>
-  </html>
+</html>
